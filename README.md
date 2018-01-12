@@ -17,7 +17,7 @@ environment such that an agent can be in one cell at a time. Moving in a
 grid is relatively straightforward: from any cell, an agent can traverse
 to any of its four (or eight) neighboring cells.
 
-[![](grid.png)](grid.png)
+[![](instructions/grid.png)](grid.png)
 
 In this assignment, you will write the code to superimpose a grid over
 any given terrain so that an agent can navigate by moving left, right,
