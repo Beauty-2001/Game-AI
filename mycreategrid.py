@@ -39,7 +39,7 @@ def myCreateGrid(world, cellsize):
     dimensions = (gridcols, gridrows)
     # TODO: Create MxN grid for T/F
     grid = numpy.zeros((gridcols, gridrows))
-    halfcell = math.floor(cellsize / 2)
+    halfcell = int(cellsize/2)
     # TODO: Iterate over cells to see if obstacle (needs more samples)
     for i in xrange(gridcols):
         for j in xrange(gridrows):
@@ -50,12 +50,14 @@ def myCreateGrid(world, cellsize):
             in_obstacle |= pointInsidePolygonLines((point[0] + cellsize, point[1]), lines)
             in_obstacle |= pointInsidePolygonLines((point[0] + cellsize, point[1] + cellsize), lines)
             in_obstacle |= pointInsidePolygonLines((point[0], point[1] + cellsize), lines)
-            in_obstacle |= pointInsidePolygonLines((point[0] + int(cellsize/2), point[1] + int(cellsize/2)), lines)
+            in_obstacle |= pointInsidePolygonLines((point[0] + cellsize, point[1] + cellsize), lines)
             # # Sample inside cell
-            # for _ in xrange(50):
-            #     xrand = numpy.random.randint(0, cellsize)
-            #     yrand = numpy.random.randint(0, cellsize)
-            #     in_obstacle |= pointInsidePolygonLines((point[0] + xrand, point[1] + yrand), lines)
+            for _ in xrange(50):
+                xrand = numpy.random.randint(0, cellsize)
+                yrand = numpy.random.randint(0, cellsize)
+                in_obstacle |= pointInsidePolygonLines((point[0] + xrand, point[1] + yrand), lines)
+                if in_obstacle:
+                    break
             grid[i][j] = not in_obstacle
     ### YOUR CODE GOES ABOVE HERE ###
     return grid, dimensions
