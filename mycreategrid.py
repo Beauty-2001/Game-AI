@@ -25,10 +25,37 @@ from core import *
 
 # Creates a grid as a 2D array of True/False values (True = traversable). Also returns the dimensions of the grid as a (columns, rows) list.
 def myCreateGrid(world, cellsize):
-	grid = None
-	dimensions = (0, 0)
-	### YOUR CODE GOES BELOW HERE ###
-
-	### YOUR CODE GOES ABOVE HERE ###
-	return grid, dimensions
-
+    grid = None
+    dimensions = (0, 0)
+    ### YOUR CODE GOES BELOW HERE ###
+    # Get dims
+    world_dims = world.getDimensions()
+    # obstacles = world.getObstacles()
+    # Get obstacle lines omitting world boundaries
+    lines = world.getLines()[4:]
+    # Calculate number of cells
+    gridcols = int(world_dims[0]/cellsize)
+    gridrows = int(world_dims[1]/cellsize)
+    dimensions = (gridcols, gridrows)
+    # TODO: Create MxN grid for T/F
+    grid = numpy.zeros((gridcols, gridrows))
+    halfcell = math.floor(cellsize / 2)
+    # TODO: Iterate over cells to see if obstacle (needs more samples)
+    for i in xrange(gridcols):
+        for j in xrange(gridrows):
+            # TODO: Check center of cell and see if inside an obstical
+            point = (cellsize * i, cellsize * j)
+            # Sample edges and center of cell
+            in_obstacle = pointInsidePolygonLines(point, lines)
+            in_obstacle |= pointInsidePolygonLines((point[0] + cellsize, point[1]), lines)
+            in_obstacle |= pointInsidePolygonLines((point[0] + cellsize, point[1] + cellsize), lines)
+            in_obstacle |= pointInsidePolygonLines((point[0], point[1] + cellsize), lines)
+            in_obstacle |= pointInsidePolygonLines((point[0] + int(cellsize/2), point[1] + int(cellsize/2)), lines)
+            # # Sample inside cell
+            # for _ in xrange(50):
+            #     xrand = numpy.random.randint(0, cellsize)
+            #     yrand = numpy.random.randint(0, cellsize)
+            #     in_obstacle |= pointInsidePolygonLines((point[0] + xrand, point[1] + yrand), lines)
+            grid[i][j] = not in_obstacle
+    ### YOUR CODE GOES ABOVE HERE ###
+    return grid, dimensions
