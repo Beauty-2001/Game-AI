@@ -30,33 +30,34 @@ def myCreateGrid(world, cellsize):
     ### YOUR CODE GOES BELOW HERE ###
     # Get dims
     world_dims = world.getDimensions()
-    obstacles = world.getObstacles()
     # Get obstacle lines omitting world boundaries
     lines = world.getLinesWithoutBorders()
     # Calculate number of cells
     gridcols = int(world_dims[0]/cellsize)
     gridrows = int(world_dims[1]/cellsize)
     dimensions = (gridcols, gridrows)
-    # Create MxN grid for T/F
-    grid = numpy.zeros((gridcols, gridrows))
-    # Iterate over cells to see if inside obstacle
-    for i in xrange(gridcols):
-        for j in xrange(gridrows):
-            # Check center of cell and see if inside an obstical
-            point = (cellsize * i, cellsize * j)
-            # Sample edges and center of cell
-            in_obstacle = pointInsidePolygonLines(point, lines)
-            in_obstacle |= pointInsidePolygonLines((point[0] + cellsize, point[1]), lines)
-            in_obstacle |= pointInsidePolygonLines((point[0] + cellsize, point[1] + cellsize), lines)
-            in_obstacle |= pointInsidePolygonLines((point[0], point[1] + cellsize), lines)
-            in_obstacle |= pointInsidePolygonLines((point[0] + cellsize, point[1] + cellsize), lines)
-            # # Sample inside cell
-            for _ in xrange(50):
-                xrand = numpy.random.randint(0, cellsize)
-                yrand = numpy.random.randint(0, cellsize)
-                in_obstacle |= pointInsidePolygonLines((point[0] + xrand, point[1] + yrand), lines)
-                if in_obstacle:
-                    break
-            grid[i][j] = not in_obstacle
+    # Create MxN grid initialized to True
+    grid = numpy.full((gridcols, gridrows), True)
+    # TODO: Initial check to see if inside object
+    for col in xrange(gridcols):
+        for row in xrange(gridrows):
+            x = col * cellsize
+            y = row * cellsize
+            uleft = (x, y)
+            lleft = (x, y + cellsize)
+            uright = (x + cellsize, y)
+            lright = (x + cellsize, y + cellsize)
+            is_inside = pointInsidePolygonLines(uleft, lines)
+            if(not is_inside):
+                left = rayTraceWorld(uleft, lleft, lines)
+                right = rayTraceWorld(uright, lright, lines)
+                top = rayTraceWorld(uleft, uright, lines)
+                bottom = rayTraceWorld(lleft, lright, lines)
+                is_inside = left or right or top or bottom
+            grid[col][row] = not is_inside
+
+    # TODO: Find lines of grid box
+    # TODO: Check if those lines intersect with any object
+
     ### YOUR CODE GOES ABOVE HERE ###
     return grid, dimensions
