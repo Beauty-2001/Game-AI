@@ -94,7 +94,12 @@ class RandomGridNavigator(GridNavigator):
 	def __init__(self):
 		GridNavigator.__init__(self)
 	
-
+	### Create the grid
+	### self: the navigator object
+	### world: the world object
+	def createGrid(self, world):
+		self.grid, self.dimensions = myCreateGrid(world, self.cellSize)
+		return None
 
 	### Finds the shortest path from the source to the destination. It should minimally set the path.
 	### self: the navigator object

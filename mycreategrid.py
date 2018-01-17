@@ -30,20 +30,19 @@ def myCreateGrid(world, cellsize):
     ### YOUR CODE GOES BELOW HERE ###
     # Get dims
     world_dims = world.getDimensions()
-    # obstacles = world.getObstacles()
+    obstacles = world.getObstacles()
     # Get obstacle lines omitting world boundaries
-    lines = world.getLines()[4:]
+    lines = world.getLinesWithoutBorders()
     # Calculate number of cells
     gridcols = int(world_dims[0]/cellsize)
     gridrows = int(world_dims[1]/cellsize)
     dimensions = (gridcols, gridrows)
-    # TODO: Create MxN grid for T/F
+    # Create MxN grid for T/F
     grid = numpy.zeros((gridcols, gridrows))
-    halfcell = int(cellsize/2)
-    # TODO: Iterate over cells to see if obstacle (needs more samples)
+    # Iterate over cells to see if inside obstacle
     for i in xrange(gridcols):
         for j in xrange(gridrows):
-            # TODO: Check center of cell and see if inside an obstical
+            # Check center of cell and see if inside an obstical
             point = (cellsize * i, cellsize * j)
             # Sample edges and center of cell
             in_obstacle = pointInsidePolygonLines(point, lines)
