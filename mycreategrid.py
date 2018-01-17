@@ -38,26 +38,26 @@ def myCreateGrid(world, cellsize):
     dimensions = (gridcols, gridrows)
     # Create MxN grid initialized to True
     grid = numpy.full((gridcols, gridrows), True)
-    # TODO: Initial check to see if inside object
     for col in xrange(gridcols):
         for row in xrange(gridrows):
+            # Find lines of grid box
             x = col * cellsize
             y = row * cellsize
-            uleft = (x, y)
-            lleft = (x, y + cellsize)
-            uright = (x + cellsize, y)
-            lright = (x + cellsize, y + cellsize)
-            is_inside = pointInsidePolygonLines(uleft, lines)
+            # Initial check to see if inside object
+            is_inside = pointInsidePolygonLines((x,y), lines)
+            # Check if those lines intersect with any object
             if(not is_inside):
+                uleft = (x, y)
+                lleft = (x, y + cellsize)
+                uright = (x + cellsize, y)
+                lright = (x + cellsize, y + cellsize)
+
                 left = rayTraceWorld(uleft, lleft, lines)
                 right = rayTraceWorld(uright, lright, lines)
                 top = rayTraceWorld(uleft, uright, lines)
                 bottom = rayTraceWorld(lleft, lright, lines)
                 is_inside = left or right or top or bottom
             grid[col][row] = not is_inside
-
-    # TODO: Find lines of grid box
-    # TODO: Check if those lines intersect with any object
 
     ### YOUR CODE GOES ABOVE HERE ###
     return grid, dimensions
