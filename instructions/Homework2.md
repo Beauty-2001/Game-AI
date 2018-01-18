@@ -6,7 +6,7 @@ Grid topologies discretize the environment and assumes an agent can be in one di
 
 A **path network** is a set of path nodes and edges that facilitates obstacle avoidance. The path network discretizes a continuous space into a small number of points and edges that allow transitions between points. However, unlike a grid topology, a path network does not require the agent to be at one of the path nodes at all times. The agent can be at any point in the terrain. When the agent needs to move to a different location and an obstacle is in the way, the agent can move to the nearest path node accessible by straight-line movement and then find a path through the edges of the path network to another path node near to the desired destination.
 
-[![](instructions/pathnet.png)](navmesh1.png)
+[![](pathnet.png)](navmesh1.png)
 
 In this assignment, you will be provided with different terrains with obstacles and hard-coded path nodes. You must write the code to generate the path network, as a set of edges between path nodes. An edge between path nodes exists when (a) there is no obstacle between the two path nodes, and (b) there is sufficient space on either side of the edge so that an agent can follow the line without colliding with any obstacles.
 
@@ -16,7 +16,7 @@ We will test path network using a random-walk navigator that moves the agent to 
 
 ## What you need to know
 
-Please consult [homework 1](homework1.html) for background on the Game Engine. In addition to the information about the game engine provided there, the following elements will be used.
+Please consult [homework 1](Homework1.md) for background on the Game Engine. In addition to the information about the game engine provided there, the following elements will be used.
 
 ### PathNetworkNavigator
 
