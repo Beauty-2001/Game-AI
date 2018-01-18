@@ -219,7 +219,7 @@ class Agent(Mover):
 
 	### moveTarget: where to move to. Setting this to non-None value activates movement (update fn)
 	### moveOrigin: where moving from.
-	### navigator: model that does path planning
+	### navigator: model that does pathplanning
 	### firerate: how often agent can fire
 	### firetimer: how long since last firing
 	### canfire: can the agent fire?
@@ -299,7 +299,7 @@ class Agent(Mover):
 		self.turnToFace(pos)
 	
 
-	### Set the path planning module
+	### Set the pathplanning module
 	def setNavigator(self, navigator):
 		navigator.setAgent(self)
 		self.navigator = navigator
@@ -328,7 +328,7 @@ class Agent(Mover):
 	def damage(self, amount):
 		self.hitpoints = self.hitpoints - amount
 		### Something should happen when hitpoints are <= 0
-		if self.hitpoints <= 0:
+		if self.hitpoints < 0:
 			self.die()
 
 	def die(self):
@@ -501,7 +501,7 @@ class Navigator():
 	def collision(self, thing):
 		print "Collision"
 	
-	### This function gets called by the agent to figure out if some shortcuts can be taken when traversing the path.
+	### This function gets called by the agent to figure out if some shortcutes can be taken when traversing the path.
 	### This function should update the path and return True if the path was updated
 	def smooth(self):
 		return False
@@ -571,7 +571,7 @@ class NavMeshNavigator(PathNetworkNavigator):
 		self.drawNavMesh(self.world.debug)
 		self.drawPathNetwork(self.world.debug)
 	
-	### Create the path node network and pre-compute all shortest paths along the network
+	### Create the pathnode network and pre-compute all shortest paths along the network
 	### self: the navigator object
 	### world: the world object
 	def createPathNetwork(self, world):
@@ -688,7 +688,7 @@ class RandomObstacle(Obstacle):
 				dist = radius
 #			print "dist", dist
 			sphericals.append((rad, dist))
-		# Convert to Cartesian coordinates
+		# Convert to cartesian coordinates
 		for (rad, dist) in sphericals:
 			points.append(((int(math.cos(rad)*dist)+radius), int((math.sin(rad)*dist)+radius)))
 		# Create surface
@@ -808,9 +808,8 @@ class GameWorld():
 		self.time = time.time()
 		corerandom.seed(seed or self.time)
 		random.seed(self.time)
-		#initialize Pygame and set up screen and background surface
+		#initialize pygame and set up screen and background surface
 		pygame.init()
-		self.font = pygame.font.SysFont("monospace", 15)
 		screen = pygame.display.set_mode(screendimensions)
 		# Background surface that will hold everything
 #		background = pygame.Surface(screen.get_size())
@@ -977,16 +976,7 @@ class GameWorld():
 		self.sprites.draw(self.background)
 		for o in self.obstacles:
 			o.draw(self.background)
-		self.drawMousePosition()
 		#pygame.display.flip()
-
-	def drawMousePosition(self):
-		offsetX, offsetY = self.getWorldMousePosition()
-		offsetX = int(round(offsetX))
-		offsetY = int(round(offsetY))
-		label = self.font.render("Mouse: " + str(offsetX) + "," + str(offsetY), True, (255, 0, 0))
-		textPosition = (10, 10)
-		self.screen.blit(label, textPosition)
 		
 	def handleEvents(self): 
 		events = pygame.event.get()
@@ -999,14 +989,11 @@ class GameWorld():
 				self.doKeyDown(event.key)
 				
 	def doMouseUp(self):
-		offsetX, offsetY = self.getWorldMousePosition()
-		self.agent.navigateTo([offsetX, offsetY])
-
-	def getWorldMousePosition(self):
 		pos = pygame.mouse.get_pos()
 		offsetX = pos[0] + self.agent.position[0] - self.camera[0]
 		offsetY = pos[1] + self.agent.position[1] - self.camera[1]
-		return offsetX, offsetY
+		self.agent.navigateTo([offsetX, offsetY])
+		
 
 	def doKeyDown(self, key):
 		if key == 32: #space
@@ -1024,37 +1011,11 @@ class GameWorld():
 				# Collision against obstacles
 				for o in self.obstacles:
 					c = False
-					needCheckVertex = False
-					if isinstance(m1, Agent) and m1.moveTarget != None:
-						moverRadius = m1.getRadius()
-						lines = o.getLines()
-						direction = numpy.subtract(m1.moveTarget, m1.position)
-						magnitude = numpy.linalg.norm(direction)
-						if magnitude > 0:
-							direction = direction / magnitude
-						nextPosition = tuple(numpy.add(m1.position, direction * (m1.speed[0] + moverRadius)))
-						p = rayTraceWorldNoEndPoints(m1.position, nextPosition, lines)
-						if p == None:
-							needCheckVertex = True
-					if needCheckVertex:
-						for v in o.getPoints():
-							# check v between m1.position and nextPosition
-							if between(v[0], m1.position[0], nextPosition[0]) and between(v[1], m1.position[1], nextPosition[1]):
-								d = minimumDistance((m1.position, nextPosition), v)
-								if d < moverRadius:
-									needCheckVertex = False
-									break
-						if needCheckVertex:
-							for l in lines:
-								if minimumDistance(l, nextPosition) < moverRadius:
-									needCheckVertex = False
-									break
-					if not needCheckVertex:
-						for l in o.getLines():
-							for r in ((m1.rect.topleft, m1.rect.topright), (m1.rect.topright, m1.rect.bottomright), (m1.rect.bottomright, m1.rect.bottomleft), (m1.rect.bottomleft, m1.rect.topleft)):
-								hit = calculateIntersectPoint(l[0], l[1], r[0], r[1])
-								if hit is not None:
-									c = True
+					for l in o.getLines():
+						for r in ((m1.rect.topleft, m1.rect.topright), (m1.rect.topright, m1.rect.bottomright), (m1.rect.bottomright, m1.rect.bottomleft), (m1.rect.bottomleft, m1.rect.topleft)):
+							hit = calculateIntersectPoint(l[0], l[1], r[0], r[1])
+							if hit is not None:
+								c = True
 					if c:
 						collisions.append((m1, o))
 				# Movers against movers
@@ -1307,7 +1268,9 @@ class GatedWorld(GameWorld):
 	def doKeyDown(self, key):
 		GameWorld.doKeyDown(self, key)
 		if key == 103: #'g'
-			offsetX, offsetY = self.getWorldMousePosition()
+			pos = pygame.mouse.get_pos()
+			offsetX = pos[0] + self.agent.rect.center[0] - self.camera[0]
+			offsetY = pos[1] + self.agent.rect.center[1] - self.camera[1]
 			self.addGateAtNearest((offsetX, offsetY))
 
 	def drawPotentialGates(self):

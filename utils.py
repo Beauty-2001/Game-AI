@@ -57,7 +57,7 @@ def calculateYAxisIntersect(p, m):
  
 # Calc the point where two infinitely long lines (p1 to p2 and p3 to p4) intersect.
 # Handle parallel lines and vertical lines (the later has infinite 'm').
-# Returns a point tuple of points like this ((x,y),...) or None
+# Returns a point tuple of points like this ((x,y),...)  or None
 # In non parallel cases the tuple will contain just one point.
 # For parallel lines that lay on top of one another the tuple will contain
 # all four points of the two lines
@@ -93,7 +93,7 @@ def getIntersectPoint(p1, p2, p3, p4):
 		return ((x,y),)
 	else:
 		# Parallel lines with same 'b' value must be the same line so they intersect
-		# everywhere. In this case we return the start and end points of both lines
+		# everywhere in this case we return the start and end points of both lines
 		# the calculateIntersectPoint method will sort out which of these points
 		# lays on both line segments
 		b1, b2 = None, None # vertical lines have no b value
@@ -111,12 +111,12 @@ def getIntersectPoint(p1, p2, p3, p4):
   
   
  
-# For line segments (i.e., not infinitely long lines) the intersect point
+# For line segments (ie not infinitely long lines) the intersect point
 # may not lay on both lines.
 #   
-# If the point where two lines intersect is inside both lines' bounding
+# If the point where two lines intersect is inside both line's bounding
 # rectangles then the lines intersect. Returns intersect point if the line
-# intersects or None if not
+# intesect o None if not
 def calculateIntersectPoint(p1, p2, p3, p4):
 	p = getIntersectPoint(p1, p2, p3, p4)
 	if p is not None:
@@ -324,7 +324,7 @@ def pointInsidePolygonPoints(point, polygon):
 	lines.append((polygon[len(polygon)-1], polygon[0]))
 	return pointInsidePolygonLines(point, lines)
 
-# Angle between two lines originating at (0, 0). Length of lines must be greater than 0.
+# Angle between two lines originating at (0, 0). Lenght of lines must be greater than 0.
 def angle(pt1, pt2):
 	x1, y1 = pt1
 	x2, y2 = pt2
