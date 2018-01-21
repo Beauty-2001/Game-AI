@@ -22,11 +22,21 @@ from pygame.locals import *
 from constants import *
 from utils import *
 from core import *
+from itertools import combinations
 
 # Creates the pathnetwork as a list of lines between all pathnodes that are traversable by the agent.
 def myBuildPathNetwork(pathnodes, world, agent = None):
 	lines = []
 	### YOUR CODE GOES BELOW HERE ###
-
+	# Get world lines
+	w_lines = world.getLines()
+	# Get a list of all possible point combinations
+	p_lines = list(combinations(pathnodes, r=2))
+	# Draw lines based on raycast from each pathnode to all other nodes
+	for line in p_lines:
+		if(not rayTraceWorld(line[0], line[1], w_lines)):
+			lines.append(line)
+		# TODO: Check lines to see if agent size will cause collision during movement or at node
+		# TODO: Find perpendicular line to given line, project a line by radius of agent and run rayTraceWorld on this
 	### YOUR CODE GOES ABOVE HERE ###
 	return lines
