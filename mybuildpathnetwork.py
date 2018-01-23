@@ -32,10 +32,33 @@ def myBuildPathNetwork(pathnodes, world, agent = None):
 	w_lines = world.getLines()
 	# Get a list of all possible point combinations
 	p_lines = list(combinations(pathnodes, r=2))
+	x_axis = (1,0)
 	# Draw lines based on raycast from each pathnode to all other nodes
 	for line in p_lines:
+		# line = p_lines[6]
+		# line = p_lines[1]
+		x = line[1][0] - line[0][0]
+		y = line[1][1] - line[0][1]
+		# Get angle of line
+		ang = angle(x_axis, (x,y))
+		# Use angle of perpendicular to get offset for agent radius
+		x_delt = agent.maxradius * math.sin(ang)
+		y_delt = agent.maxradius * math.cos(ang)
+		if y >= 0:
+			a = (line[0][0] + x_delt, line[0][1] - y_delt)
+			b = (line[1][0] + x_delt, line[1][1] - y_delt)
+		else:
+			a = (line[0][0] + x_delt, line[0][1] + y_delt)
+			b = (line[1][0] + x_delt, line[1][1] + y_delt)
+
+		# Now check rayTrace for created lines
 		if(not rayTraceWorld(line[0], line[1], w_lines)):
+			print math.degrees(ang)
 			lines.append(line)
+			pygame.draw.line(world.debug, (255,0,0), a, b, 1)
+			drawCross(world.debug, a, color = (0, 255, 0), size=4, width=1)
+			drawCross(world.debug, b, color = (0, 0, 255), size=4, width=1)
+			
 		# TODO: Check lines to see if agent size will cause collision during movement or at node
 		# TODO: Find perpendicular line to given line, project a line by radius of agent and run rayTraceWorld on this
 	### YOUR CODE GOES ABOVE HERE ###
