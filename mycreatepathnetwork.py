@@ -30,6 +30,35 @@ def myCreatePathNetwork(world, agent = None):
 	polys = []
 	### YOUR CODE GOES BELOW HERE ###
 
+	# Draw edges from every corner of the world to unobstructed points
+	w_points = world.getPoints()
+	w_lines = world.getLinesWithoutBorders()
+	edge_points = w_points[:4]
+	obj_points = w_points[4:]
+	for edge in edge_points:
+		for obj in obj_points:
+			if (not rayTraceWorldNoEndPoints(obj, edge, w_lines)):
+				edges.append((edge, obj))
+				# Also check if edges are overlapping from previous
+				w_lines.append((edge, obj))
+				pygame.draw.line(world.debug, (0,0,255), edge, obj, 1)
+	# Cleanup
+	del edge_points
+	# TODO: Draw lines from all object points to other unobstructed object points
+	objs = world.getObstacles()
+	pnt_set = set(obj_points)
+	for obj in objs:
+		# Remove inter-object points from consideration
+		reduced = list(pnt_set.difference(obj.points))
+		for point in obj.getPoints():
+			for dest in reduced:
+				if (not rayTraceWorldNoEndPoints(point, dest, w_lines)):
+					edges.append((point, dest))
+					w_lines.append((point, dest))
+					pygame.draw.line(world.debug, (255, 0, 0), point, dest, 1)
+
+	# TODO: Also check if intersect with previously drawn edges
+
 	### YOUR CODE GOES ABOVE HERE ###
 	return nodes, edges, polys
 
