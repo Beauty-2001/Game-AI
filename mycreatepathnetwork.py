@@ -22,7 +22,28 @@ from pygame.locals import *
 from constants import *
 from utils import *
 from core import *
+from itertools import permutations
 
+def collidedWithNonParallel(p1, p2, lines):
+	coll = rayTraceWorldNoEndPoints(p1, p2, lines)
+	if coll:
+		coll = (round(coll[0]), round(coll[1]))
+	if coll == p1 or coll == p2:
+		return False
+	return coll
+
+def noPointsInPolygon(poly, w_points):
+	for point in w_points:
+		if pointInsidePolygonPoints(point, poly):
+			return False
+	return True
+
+def appendPolyNoDuplicates(poly, poly_list):
+	for permut in permutations(poly):
+		if poly_list.count(permut):
+			return
+	poly_list.append(poly)
+	
 # Creates a pathnode network that connects the midpoints of each navmesh together
 def myCreatePathNetwork(world, agent = None):
 	nodes = []
@@ -30,34 +51,35 @@ def myCreatePathNetwork(world, agent = None):
 	polys = []
 	### YOUR CODE GOES BELOW HERE ###
 
-	# Draw edges from every corner of the world to unobstructed points
 	w_points = world.getPoints()
-	w_lines = world.getLinesWithoutBorders()
-	edge_points = w_points[:4]
 	obj_points = w_points[4:]
-	for edge in edge_points:
-		for obj in obj_points:
-			if (not rayTraceWorldNoEndPoints(obj, edge, w_lines)):
-				edges.append((edge, obj))
-				# Also check if edges are overlapping from previous
-				w_lines.append((edge, obj))
-				pygame.draw.line(world.debug, (0,0,255), edge, obj, 1)
-	# Cleanup
-	del edge_points
-	# TODO: Draw lines from all object points to other unobstructed object points
-	objs = world.getObstacles()
-	pnt_set = set(obj_points)
-	for obj in objs:
-		# Remove inter-object points from consideration
-		reduced = list(pnt_set.difference(obj.points))
-		for point in obj.getPoints():
-			for dest in reduced:
-				if (not rayTraceWorldNoEndPoints(point, dest, w_lines)):
-					edges.append((point, dest))
-					w_lines.append((point, dest))
-					pygame.draw.line(world.debug, (255, 0, 0), point, dest, 1)
+	w_lines = world.getLines()
 
-	# TODO: Also check if intersect with previously drawn edges
+	# TODO: For every point, try to make a triangle with every other point in scene
+	for a in w_points:
+		for b in filter(lambda x, a=a: x != a, w_points):
+			if not collidedWithNonParallel(a, b, w_lines):
+				for c in filter(lambda x, a=a, b=b: x != a and x != b, w_points):
+					if not collidedWithNonParallel(b, c, w_lines) \
+						and not collidedWithNonParallel(a, c, w_lines) \
+						and noPointsInPolygon((a,b,c), \
+						filter(lambda x, a=a, b=b, c=c: x != a and x != b and x != c, w_points)):
+						# Valid triangle! Yay
+						appendPolyNoDuplicates((a,b,c), polys)
+						appendLineNoDuplicates((a,b), w_lines)
+						appendLineNoDuplicates((a,c), w_lines)
+						appendLineNoDuplicates((c,b), w_lines)
+						# pygame.draw.polygon(world.debug, (0, 255, 0), (a, b, c), 2)
+
+	# TODO: Ensure triangles do not get made inside objects
+	for tri in list(polys):
+		for obj in world.getObstacles():
+			tmpobj = set(obj.getPoints())
+			if tmpobj.issuperset(list(tri)):
+				polys.remove(tri)
+
+	for tri in polys:
+		pygame.draw.polygon(world.debug, (255, 0, 0), tri, 2)
 
 	### YOUR CODE GOES ABOVE HERE ###
 	return nodes, edges, polys
