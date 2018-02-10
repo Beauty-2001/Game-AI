@@ -27,7 +27,7 @@ from itertools import permutations
 def collidedWithNonParallel(p1, p2, lines):
 	coll = rayTraceWorldNoEndPoints(p1, p2, lines)
 	if coll:
-		coll = (round(coll[0]), round(coll[1]))
+		coll = (math.ceil(coll[0]), math.ceil(coll[1]))
 	if coll == p1 or coll == p2:
 		return False
 	return coll
@@ -44,18 +44,55 @@ def appendPolyNoDuplicates(poly, poly_list):
 			return
 	poly_list.append(poly)
 	
+origin = None
+refvec = [0,1]
+
+def clockwiseangle_and_distance(point):
+	# Vector between point and origin v = p - o
+	vector = [point[0]-origin[0], point[1]-origin[1]]
+	# Length of vector: ||v||
+	lenvector = math.hypot(vector[0], vector[1])
+	# If length is zero there is no angle
+	if lenvector == 0:
+		return -math.pi, 0
+	# Normalize vector: v/||v||
+	normalized = [vector[0]/lenvector, vector[1]/lenvector]
+	dotprod = normalized[0]*refvec[0] + normalized[1]*refvec[1]		# x1*x2 + y1*y2
+	diffprod = refvec[1]*normalized[0] - refvec[0]*normalized[1]	# x1*y2 - y1*x2
+	angle = math.atan2(diffprod, dotprod)
+	# Negative angles represent counter-clockwise angles so we need to subtract them
+	# from 2*pi (360 degrees)
+	if angle < 0:
+		return 2*math.pi+angle
+	# Return first angle as its primary sorting criteria, if two vectors have same angle
+	# shorter distance should come first
+	return angle
+
+# Used to recursively expand a polygon given the other polygons in the scene
+def expandPoly(poly, o_polys):
+	global origin
+	for obj in filter(lambda x, poly=poly: x != poly, o_polys):
+		if polygonsAdjacent(poly, obj):
+			shape = list(set(poly + obj))
+			origin = shape[-1]
+			shape = tuple(sorted(shape, key=clockwiseangle_and_distance))
+			if isConvex(shape):
+				o_polys.remove(poly)
+				o_polys.remove(obj)
+				appendPolyNoDuplicates(shape, o_polys)
+				return expandPoly(shape, o_polys)
+	return
+
 # Creates a pathnode network that connects the midpoints of each navmesh together
 def myCreatePathNetwork(world, agent = None):
 	nodes = []
 	edges = []
 	polys = []
 	### YOUR CODE GOES BELOW HERE ###
-
 	w_points = world.getPoints()
-	obj_points = w_points[4:]
 	w_lines = world.getLines()
 
-	# TODO: For every point, try to make a triangle with every other point in scene
+	# For every point, try to make a triangle with every other point in scene
 	for a in w_points:
 		for b in filter(lambda x, a=a: x != a, w_points):
 			if not collidedWithNonParallel(a, b, w_lines):
@@ -69,17 +106,27 @@ def myCreatePathNetwork(world, agent = None):
 						appendLineNoDuplicates((a,b), w_lines)
 						appendLineNoDuplicates((a,c), w_lines)
 						appendLineNoDuplicates((c,b), w_lines)
-						# pygame.draw.polygon(world.debug, (0, 255, 0), (a, b, c), 2)
 
-	# TODO: Ensure triangles do not get made inside objects
+	# Ensure triangles do not get made inside objects
 	for tri in list(polys):
 		for obj in world.getObstacles():
 			tmpobj = set(obj.getPoints())
 			if tmpobj.issuperset(list(tri)):
 				polys.remove(tri)
 
-	for tri in polys:
-		pygame.draw.polygon(world.debug, (255, 0, 0), tri, 2)
+	poly_len = 0
+	# Merge triangles into convex polys
+	while poly_len != len(polys):
+		poly_len = len(polys)
+		for tri in polys:
+			expandPoly(tri, polys)
+
+	# Remove smaller polys
+	for poly_a in list(polys):
+		for poly_b in filter(lambda x, poly=poly_a: x != poly, polys):
+			poly_b_set = set(poly_b)
+			if poly_b_set.issuperset(list(poly_a)):
+				polys.remove(poly_a)
 
 	### YOUR CODE GOES ABOVE HERE ###
 	return nodes, edges, polys
