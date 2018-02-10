@@ -25,6 +25,9 @@ from core import *
 from itertools import permutations, combinations
 from math import sin, cos
 
+def lineInSet(p0, p1, lines):
+    return lines.count((p0, p1)) or lines.count((p1,p0))
+
 def collidedWithNonParallel(p1, p2, lines):
     coll = rayTraceWorldNoEndPoints(p1, p2, lines)
     if coll:
@@ -106,7 +109,7 @@ def myCreatePathNetwork(world, agent = None):
                         appendPolyNoDuplicates((a,b,c), polys)
                         appendLineNoDuplicates((a,b), w_lines)
                         appendLineNoDuplicates((a,c), w_lines)
-                        appendLineNoDuplicates((c,b), w_lines)
+                        appendLineNoDuplicates((b,c), w_lines)
 
     # Ensure triangles do not get made inside objects
     for tri in list(polys):
@@ -122,11 +125,24 @@ def myCreatePathNetwork(world, agent = None):
         for tri in polys:
             expandPoly(tri, polys)
 
-    # Create nodes at center
+    w_lines = world.getLines()
+
+    # # Create nodes at center
+    # for poly in polys:
+    #     nodes.append(tuple([sum(x)/len(poly) for x in zip(*poly)]))
+    #     drawCross(world.debug, nodes[-1])
+
+    # Create nodes on line midpoints
+    # Then find line midpoints
+    nodes = set()
     for poly in polys:
-        nodes.append(tuple([sum(x)/len(poly) for x in zip(*poly)]))
-        drawCross(world.debug, nodes[-1])
-    
+        for i in xrange(-1, len(poly)-1):
+            if not lineInSet(poly[i], poly[i+1], w_lines):
+                node = ((poly[i][0] + poly[i+1][0]) / 2, 
+                        (poly[i][1] + poly[i+1][1]) / 2)
+                nodes.add(node)
+                drawCross(world.debug, node)
+        
     # r = (127,0,0)
     # g = (0,127,0)
     # b = (0,0,127)
@@ -136,7 +152,6 @@ def myCreatePathNetwork(world, agent = None):
     # drawPolygon(polys[i+1], world.debug, g, 3)
     # drawPolygon(polys[i+2], world.debug, b, 3)
 
-    w_lines = world.getLines()
     x_axis = (1, 0)
     edg_a = None
     edg_b = None
