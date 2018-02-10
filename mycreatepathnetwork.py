@@ -164,10 +164,10 @@ def myCreatePathNetwork(world, agent = None):
 
         # Now check rayTrace for created lines
         # Check lines to see if agent size will cause collision during movement or at node
-        if(not rayTraceWorld(line[0], line[1], w_lines)
-           and not rayTraceWorld(edg_a[0], edg_a[1], w_lines)
-           and not rayTraceWorld(edg_b[0], edg_b[1], w_lines)):
-            edges.append(line)
+        if(not rayTraceWorldNoEndPoints(line[0], line[1], w_lines)
+           and not rayTraceWorldNoEndPoints(edg_a[0], edg_a[1], w_lines)
+           and not rayTraceWorldNoEndPoints(edg_b[0], edg_b[1], w_lines)):
+            appendLineNoDuplicates(line, edges)
 
     ### YOUR CODE GOES ABOVE HERE ###
     return nodes, edges, polys
