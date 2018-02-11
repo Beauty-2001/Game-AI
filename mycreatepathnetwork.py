@@ -48,6 +48,10 @@ def appendPolyNoDuplicates(poly, poly_list):
             return
     poly_list.append(poly)
 
+def removeLineDuplicates(line, line_list):
+    line_list.remove(line)
+    line_list.remove(reverseLine(line))
+
 origin = (0,0)
 refvec = [0,1]
 
@@ -89,7 +93,7 @@ def expandPoly(poly, o_polys):
 
 # Creates a pathnode network that connects the midpoints of each navmesh together
 def myCreatePathNetwork(world, agent = None):
-    nodes = []
+    nodes = set()
     edges = []
     polys = []
     ### YOUR CODE GOES BELOW HERE ###
@@ -125,64 +129,67 @@ def myCreatePathNetwork(world, agent = None):
         for tri in polys:
             expandPoly(tri, polys)
 
-    w_lines = world.getLines()
-
-    # # Create nodes at center
-    # for poly in polys:
-    #     nodes.append(tuple([sum(x)/len(poly) for x in zip(*poly)]))
-    #     drawCross(world.debug, nodes[-1])
-
-    # Create nodes on line midpoints
-    # Then find line midpoints
-    nodes = set()
-    for poly in polys:
-        for i in xrange(-1, len(poly)-1):
-            if not lineInSet(poly[i], poly[i+1], w_lines):
-                node = ((poly[i][0] + poly[i+1][0]) / 2, 
-                        (poly[i][1] + poly[i+1][1]) / 2)
-                nodes.add(node)
-                drawCross(world.debug, node)
-        
-    # r = (127,0,0)
-    # g = (0,127,0)
-    # b = (0,0,127)
-
-    # i = 6
-    # drawPolygon(polys[i], world.debug, r, 3)
-    # drawPolygon(polys[i+1], world.debug, g, 3)
-    # drawPolygon(polys[i+2], world.debug, b, 3)
-
     x_axis = (1, 0)
     edg_a = None
     edg_b = None
 
-    # Make path between nodes
-    # TODO: find shortest paths
-    for line in list(combinations(nodes, 2)):
-        dif_x = line[1][0] - line[0][0]
-        dif_y = line[1][1] - line[0][1]
-        # Get angle of line
-        ang = angle(x_axis, (dif_x, dif_y))
-        # Use angle of perpendicular to get offset for agent radius
-        x_delt = agent.maxradius * sin(ang)
-        y_delt = agent.maxradius * cos(ang)
-        if dif_y >= 0:
-            edg_a = ((line[0][0] + x_delt, line[0][1] - y_delt),
-                     (line[1][0] + x_delt, line[1][1] - y_delt))
-            edg_b = ((line[0][0] - x_delt, line[0][1] + y_delt),
-                     (line[1][0] - x_delt, line[1][1] + y_delt))
-        else:
-            edg_a = ((line[0][0] + x_delt, line[0][1] + y_delt),
-                     (line[1][0] + x_delt, line[1][1] + y_delt))
-            edg_b = ((line[0][0] - x_delt, line[0][1] - y_delt),
-                     (line[1][0] - x_delt, line[1][1] - y_delt))
+    # Create nodes and edges using center, mid-point of lines, and corners of polygon
+    for poly in polys:
+        w_lines = world.getLines()
+        l_lines = []
+        # Center
+        c_node = tuple([sum(x)/len(poly) for x in zip(*poly)])
+        l_nodes = set([c_node])
+        # Midpoint of lines
+        for i in xrange(-1, len(poly)-1):
+            if not lineInSet(poly[i], poly[i+1], w_lines):
+                node_a = ((3 * poly[i][0] + poly[i+1][0]) / 4, 
+                          (3 * poly[i][1] + poly[i+1][1]) / 4)
+                l_nodes.add(node_a)
+                node_b = ((poly[i][0] + 3 * poly[i+1][0]) / 4, 
+                          (poly[i][1] + 3 * poly[i+1][1]) / 4)
+                l_nodes.add(node_b)
+                l_lines.append((node_a, node_b))
+                l_lines.append((node_b, node_a))
 
-        # Now check rayTrace for created lines
-        # Check lines to see if agent size will cause collision during movement or at node
-        if(not rayTraceWorldNoEndPoints(line[0], line[1], w_lines)
-           and not rayTraceWorldNoEndPoints(edg_a[0], edg_a[1], w_lines)
-           and not rayTraceWorldNoEndPoints(edg_b[0], edg_b[1], w_lines)):
-            appendLineNoDuplicates(line, edges)
+        # Get edges
+        p_lines = set(combinations(l_nodes, 2)).difference(l_lines)
+        for line in p_lines:
+            dif_x = line[1][0] - line[0][0]
+            dif_y = line[1][1] - line[0][1]
+            # Get angle of line
+            ang = angle(x_axis, (dif_x, dif_y))
+            # Use angle of perpendicular to get offset for agent radius
+            # x_delt = 0
+            # y_delt = 0
+            x_delt = (agent.maxradius) * sin(ang)
+            y_delt = (agent.maxradius) * cos(ang)
+            if dif_y >= 0:
+                edg_a = ((line[0][0] + x_delt, line[0][1] - y_delt),
+                        (line[1][0] + x_delt, line[1][1] - y_delt))
+                edg_b = ((line[0][0] - x_delt, line[0][1] + y_delt),
+                        (line[1][0] - x_delt, line[1][1] + y_delt))
+            else:
+                edg_a = ((line[0][0] + x_delt, line[0][1] + y_delt),
+                        (line[1][0] + x_delt, line[1][1] + y_delt))
+                edg_b = ((line[0][0] - x_delt, line[0][1] - y_delt),
+                        (line[1][0] - x_delt, line[1][1] - y_delt))
+
+            # Now check rayTrace for created lines
+            # Check lines to see if agent size will cause collision during movement or at node
+            if not rayTraceWorldNoEndPoints(line[0], line[1], w_lines) \
+            and not rayTraceWorldNoEndPoints(edg_a[0], edg_a[1], w_lines) \
+            and not rayTraceWorldNoEndPoints(edg_b[0], edg_b[1], w_lines) \
+            and not rayTraceWorldNoEndPoints(edg_a[0], edg_b[1], w_lines):
+                appendLineNoDuplicates(line, edges)
+                nodes.add(line[0])
+                nodes.add(line[1])
+                # appendLineNoDuplicates(line, w_lines)
+                drawCross(world.debug, line[0])
+                drawCross(world.debug, line[1])
+            else:
+                drawCross(world.debug, line[0], (255,0,0))
+                drawCross(world.debug, line[1], (255,0,0))
 
     ### YOUR CODE GOES ABOVE HERE ###
     return nodes, edges, polys
