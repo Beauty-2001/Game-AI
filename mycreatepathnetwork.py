@@ -17,11 +17,8 @@
 '''
 
 import sys, pygame, math, numpy, random, time, copy, operator
-from pygame.locals import *
 
-from constants import *
-from utils import *
-from core import *
+from utils import rayTraceWorldNoEndPoints, pointInsidePolygonPoints, polygonsAdjacent, isConvex, appendLineNoDuplicates, angle, drawCross, reverseLine
 from itertools import permutations, combinations
 from math import sin, cos
 
@@ -138,8 +135,7 @@ def myCreatePathNetwork(world, agent = None):
         w_lines = world.getLines()
         l_lines = []
         # Center
-        c_node = tuple([sum(x)/len(poly) for x in zip(*poly)])
-        l_nodes = set([c_node])
+        l_nodes = set()
         # Midpoint of lines
         for i in xrange(-1, len(poly)-1):
             if not lineInSet(poly[i], poly[i+1], w_lines):
@@ -149,8 +145,10 @@ def myCreatePathNetwork(world, agent = None):
                 node_b = ((poly[i][0] + 3 * poly[i+1][0]) / 4, 
                           (poly[i][1] + 3 * poly[i+1][1]) / 4)
                 l_nodes.add(node_b)
-                l_lines.append((node_a, node_b))
-                l_lines.append((node_b, node_a))
+                node_c = ((poly[i][0] + poly[i+1][0]) / 2,
+                          (poly[i][1] + poly[i+1][1]) / 2)
+                l_nodes.add(node_c)
+                l_lines += list(permutations([node_a, node_b, node_c], 2))
 
         # Get edges
         p_lines = set(combinations(l_nodes, 2)).difference(l_lines)
@@ -160,8 +158,6 @@ def myCreatePathNetwork(world, agent = None):
             # Get angle of line
             ang = angle(x_axis, (dif_x, dif_y))
             # Use angle of perpendicular to get offset for agent radius
-            # x_delt = 0
-            # y_delt = 0
             x_delt = (agent.maxradius) * sin(ang)
             y_delt = (agent.maxradius) * cos(ang)
             if dif_y >= 0:
@@ -180,11 +176,11 @@ def myCreatePathNetwork(world, agent = None):
             if not rayTraceWorldNoEndPoints(line[0], line[1], w_lines) \
             and not rayTraceWorldNoEndPoints(edg_a[0], edg_a[1], w_lines) \
             and not rayTraceWorldNoEndPoints(edg_b[0], edg_b[1], w_lines) \
-            and not rayTraceWorldNoEndPoints(edg_a[0], edg_b[1], w_lines):
+            and not rayTraceWorldNoEndPoints(edg_a[0], edg_b[1], w_lines) \
+            and not rayTraceWorldNoEndPoints(line[0], line[1], edges):
                 appendLineNoDuplicates(line, edges)
                 nodes.add(line[0])
                 nodes.add(line[1])
-                # appendLineNoDuplicates(line, w_lines)
                 drawCross(world.debug, line[0])
                 drawCross(world.debug, line[1])
             else:
