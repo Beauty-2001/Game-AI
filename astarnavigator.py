@@ -24,6 +24,147 @@ from utils import *
 from core import *
 from mycreatepathnetwork import *
 from mynavigatorhelpers import *
+import heapq
+
+###############################
+### Priority Queue
+###
+### Uses the heapq library to create a priority queue
+class PriorityQueue(object):
+    """
+    A queue structure where each element is served in order of priority.
+
+    Elements in the queue are popped based on the priority with higher priority
+    elements being served before lower priority elements.  If two elements have
+    the same priority, they will be served in the order they were added to the
+    queue.
+
+    Traditionally priority queues are implemented with heaps, but there are any
+    number of implementation options.
+
+    (Hint: take a look at the module heapq)
+
+    Attributes:
+        queue (list): Nodes added to the priority queue.
+        current (int): The index of the current node in the queue.
+    """
+
+    def __init__(self):
+        """Initialize a new Priority Queue."""
+        self.queue = []
+        self.nodes = {}
+        self.unique_id = 0
+
+    def pop(self):
+        """
+        Pop top priority node from queue.
+
+        Returns:
+            The node with the highest priority.
+        """
+
+        while self.queue:
+            priority, unique_id, node_id = heapq.heappop(self.queue)
+            if node_id is not None:
+                del self.nodes[unique_id]
+                return (priority, node_id)
+        raise BaseException('The queue is empty')
+
+    def remove(self, node_id):
+        """
+        Remove a node from the queue.
+
+        This is a hint, you might require this in ucs,
+        however, if you choose not to use it, you are free to
+        define your own method and not use it.
+
+        Args:
+            node_id (int): Index of node in queue.
+        """
+        # Retrieve node object from nodes list
+        node = self.nodes.pop(node_id)
+        # Update node id to reflect None (or Removed)
+        node[-1] = None
+
+
+    def __iter__(self):
+        """Queue iterator."""
+
+        return iter(sorted(self.queue))
+
+    def __str__(self):
+        """Priority Queue to string."""
+
+        return 'PQ:%s' % self.queue
+
+    def append(self, node):
+        """
+        Append a node to the queue.
+
+        Args:
+            node: Comparable Object to be added to the priority queue.
+        """
+
+        # Increment the unique id counter
+        self.unique_id += 1
+        # create node entry with layout of priority, unique id, node id
+        node_entry = [node[0], self.unique_id, node[-1]]
+        # add node entry to the list of nodes, indexed by its node id
+        self.nodes[self.unique_id] = node_entry
+        # finally push node_entry onto heap
+        heapq.heappush(self.queue, node_entry)
+
+    def __contains__(self, key):
+        """
+        Containment Check operator for 'in'
+
+        Args:
+            key: The key to check for in the queue.
+
+        Returns:
+            True if key is found in queue, False otherwise.
+        """
+
+        return key in [n for _, n in self.queue]
+
+    def __eq__(self, other):
+        """
+        Compare this Priority Queue with another Priority Queue.
+
+        Args:
+            other (PriorityQueue): Priority Queue to compare against.
+
+        Returns:
+            True if the two priority queues are equivalent.
+        """
+
+        return self == other
+
+    def size(self):
+        """
+        Get the current size of the queue.
+
+        Returns:
+            Integer of number of items in queue.
+        """
+
+        return len(self.queue)
+
+    def clear(self):
+        """Reset queue to empty (no nodes)."""
+
+        self.queue = []
+
+    def top(self):
+        """
+        Get the top item in the queue.
+
+        Returns:
+            The first item stored in teh queue.
+        """
+
+        return self.queue[0]
+
 
 
 ###############################
@@ -105,13 +246,70 @@ def unobstructedNetwork(network, worldLines):
 	return newnetwork
 
 
+def euclidean_dist_heuristic(v_pos, goal_pos):
+    """
+    Warm-up exercise: Implement the euclidean distance heuristic.
 
+    See README.md for exercise description.
+
+    Args:
+        graph (ExplorableGraph): Undirected graph to search.
+        v (str): Key for the node to calculate from.
+        goal (str): Key for the end node to calculate to.
+
+    Returns:
+        Euclidean distance between `v` node and `goal` node
+    """
+
+    tmp = (math.pow((goal_pos[0] - v_pos[0]), 2), math.pow((goal_pos[1] - v_pos[1]), 2))
+    return round(math.sqrt(tmp[0] + tmp[1]))
+
+def get_children(parent, network):
+    children = []
+    for line in network:
+        if line[0] == parent:
+            children.append(line[1])
+        elif line[1] == parent:
+            children.append(line[0])
+    return children
 
 def astar(init, goal, network):
 	path = []
-	open = []
-	closed = []
+	closed = [] # Another name for explored
 	### YOUR CODE GOES BELOW HERE ###
+	frontier = PriorityQueue()
+	explored = {}
+	node_data = {}
+	# Initialize frontier and node_data map with start state
+	frontier.append((0, init))
+	node_data[init] = (None, 0)
+	while True:
+		exploring = frontier.pop()
+		if exploring[-1] == goal:
+			state = exploring[-1]
+			parent = node_data[state][0]
+			while parent:
+				path.append(state)
+				state = parent
+				parent = node_data[state][0]
+			path.append(state)
+			list.reverse(path)
+			return path, closed
+		elif exploring[-1] in explored:
+			continue
+		parent = exploring[-1]
+		children = get_children(parent, network)
+		explored[parent] = exploring
+		parent_cost = node_data[parent][1]
+		for state in children:
+			g = 0
+            # g = children[state]['weight'] + parent_cost
+			h = euclidean_dist_heuristic(state, goal)
+			cost = g + h
+			if state not in node_data or node_data[state][1] > g:
+				node_data[state] = (parent, g)
+			if state not in explored:
+				frontier.append((cost, state))
 
 	### YOUR CODE GOES ABOVE HERE ###
 	return path, closed
