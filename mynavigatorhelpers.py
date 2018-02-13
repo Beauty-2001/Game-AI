@@ -17,21 +17,32 @@
 '''
 
 import sys, pygame, math, numpy, random, time, copy
-from pygame.locals import *
+from pygame.locals import * 
 
 from constants import *
 from utils import *
 from core import *
 
+### This function optimizes the given path and returns a new path
+### source: the current position of the agent
+### dest: the desired destination of the agent
+### path: the path previously computed by the A* algorithm
+### world: pointer to the world
+def shortcutPath(source, dest, path, world, agent):
+	### YOUR CODE GOES BELOW HERE ###
 
-# Creates a path node network that connects the midpoints of each nav mesh together
-def myCreatePathNetwork(world, agent = None):
-	nodes = []
-	edges = []
-	polys = []
+	### YOUR CODE GOES BELOW HERE ###
+	return path
+
+
+### This function changes the move target of the agent if there is an opportunity to walk a shorter path.
+### This function should call nav.agent.moveToTarget() if an opportunity exists and may also need to modify nav.path.
+### nav: the navigator object
+### This function returns True if the moveTarget and/or path is modified and False otherwise
+def mySmooth(nav):
 	### YOUR CODE GOES BELOW HERE ###
 
 	### YOUR CODE GOES ABOVE HERE ###
-	return nodes, edges, polys
+	return False
 
-	
+

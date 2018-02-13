@@ -6,3 +6,6 @@
 
 # Homework 3
 [Homework 3](instructions/Homework3.md)
+
+# Homework 4
+[Homework 4](instructions/Homework4.md)

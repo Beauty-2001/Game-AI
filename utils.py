@@ -57,7 +57,7 @@ def calculateYAxisIntersect(p, m):
  
 # Calc the point where two infinitely long lines (p1 to p2 and p3 to p4) intersect.
 # Handle parallel lines and vertical lines (the later has infinite 'm').
-# Returns a point tuple of points like this ((x,y),...)  or None
+# Returns a point tuple of points like this ((x,y),...) or None
 # In non parallel cases the tuple will contain just one point.
 # For parallel lines that lay on top of one another the tuple will contain
 # all four points of the two lines
@@ -88,12 +88,12 @@ def getIntersectPoint(p1, p2, p3, p4):
 				x = p3[0]
 				y = (m1 * x) + b1           
 			else:
-				assert False
+				assert false
               
 		return ((x,y),)
 	else:
 		# Parallel lines with same 'b' value must be the same line so they intersect
-		# everywhere in this case we return the start and end points of both lines
+		# everywhere. In this case we return the start and end points of both lines
 		# the calculateIntersectPoint method will sort out which of these points
 		# lays on both line segments
 		b1, b2 = None, None # vertical lines have no b value
@@ -111,12 +111,12 @@ def getIntersectPoint(p1, p2, p3, p4):
   
   
  
-# For line segments (ie not infinitely long lines) the intersect point
+# For line segments (i.e., not infinitely long lines) the intersect point
 # may not lay on both lines.
 #   
-# If the point where two lines intersect is inside both line's bounding
+# If the point where two lines intersect is inside both lines' bounding
 # rectangles then the lines intersect. Returns intersect point if the line
-# intesect o None if not
+# intersects or None if not
 def calculateIntersectPoint(p1, p2, p3, p4):
 	p = getIntersectPoint(p1, p2, p3, p4)
 	if p is not None:
@@ -131,6 +131,14 @@ def calculateIntersectPoint(p1, p2, p3, p4):
 def between(p, p1, p2):
 	return p + EPSILON >= min(p1, p2) and p - EPSILON <= max(p1, p2)
 
+# Checks if two numbers are very close to the same value (i.e., floating point approximation).
+def almostEqualNumbers(n1, n2):
+	return abs(n1 - n2) < EPSILON
+
+# Checks if two points are very close to the same value (i.e., floating point approximation).
+def almostEqualPoints(p1, p2):
+	return almostEqualNumbers(p1[0], p2[0]) and almostEqualNumbers(p1[1], p2[1])
+
 
 def rayTrace(p1, p2, line):
 	return calculateIntersectPoint(line[0], line[1], p1, p2)
@@ -142,21 +150,6 @@ def rayTraceWorld(p1, p2, worldLines):
 		if hit != None:
 			return hit
 	return None
-
-# Check whether two lines intersect anywhere except within a given distance of an endpoint
-#def rayTraceWithThreshold(p1, p2, line, threshold):
-#	hitpoint = calculateIntersectPoint(line[0], line[1], p1, p2)
-#	if hitpoint != None and withinRangeOfPoints(hitpoint, threshold, line) == False:
-#		return hitpoint
-#	return None
-
-# Check whether the line between p1 and p2 intersects any other line, except within a given distance of an endpoint of those lines.
-#def rayTraceWorldWithThreshold(p1, p2, worldLines, threshold):
-#	for l in worldLines:
-#		hit = rayTraceWithThreshold(p1, p2, l, threshold)
-#		if hit != None:
-#			return hit
-#	return None
 
 # Check whether the line between p1 and p2 intersects with line anywhere except an endpoint.
 def rayTraceNoEndpoints(p1, p2, line):
@@ -242,10 +235,19 @@ def commonPoints(poly1, poly2):
 
 def polygonsAdjacent(poly1, poly2):
 	points = commonPoints(poly1, poly2)
-	if len(points) == 2:
-		return points
-	else:
-		return False
+	if len(points) >= 2:
+		isAdjacent = False
+		for i, point in enumerate(points[:-1]):
+			nextPoint = points[i + 1]
+			point1Index = poly1.index(point)
+			if poly1[(point1Index + 1) % len(poly1)] == nextPoint or poly1[point1Index - 1] == nextPoint:
+				point2Index = poly2.index(point)
+				if poly2[(point2Index + 1) % len(poly2)] == nextPoint or poly2[point2Index - 1] == nextPoint:
+					isAdjacent = True
+					break
+		if isAdjacent:
+			return points
+	return False
 		
 def isConvex(points):
 	p1 = None
@@ -294,9 +296,10 @@ def dotProduct(p1, p2):
 #Special routine for appending a line to a list of lines, making sure there are no duplicates added. Changes made by side-effect.
 def appendLineNoDuplicates(line, lines):
 	if (line in lines) == False and (reverseLine(line) in lines) == False:
-		return lines.append(line)
+		lines.append(line)
+		return False
 	else:
-		return lines
+		return True
 	
 #Reverse the order of points in a line.	
 def reverseLine(line):
@@ -305,11 +308,28 @@ def reverseLine(line):
 #Determine whether a point is inside an simple polygon. Polygon is a set of lines.
 def pointInsidePolygonLines(point, polygon):
 	count = 0
+	intersectEndPoints = {}
 	for l in polygon:
-		result = rayTrace(point, (-10, SCREEN[1]/2.0), l)
+		outsidePoint = (-10, SCREEN[1]/2.0)
+		result = rayTrace(point, outsidePoint, l)
 		if result != None:
-			if between(result[0], point[0], point[0]) and between(result[1], point[1], point[1]):
+			if almostEqualPoints(result, point):
 				return True
+
+			# Handles an edge case where the testing line touches the same endpoint of two lines.
+			matchingPoint = None
+			if almostEqualPoints(result, l[0]):
+				matchingPoint = (l[0], l[1])
+			elif almostEqualPoints(result, l[1]):
+				matchingPoint = (l[1], l[0])
+			if matchingPoint is not None:
+				if matchingPoint[0] in intersectEndPoints:
+					# Check whether the point is tangent or intersecting the polygon at this matching point
+					# by checking the intersection of the line segment formed by the other endpoints of the two polygon line segments.
+					if calculateIntersectPoint(point, outsidePoint, intersectEndPoints[matchingPoint[0]], matchingPoint[1]) is not None:
+						continue
+				else:
+					intersectEndPoints[matchingPoint[0]] = matchingPoint[1]
 			count = count + 1
 	return count%2 == 1
 
@@ -324,7 +344,7 @@ def pointInsidePolygonPoints(point, polygon):
 	lines.append((polygon[len(polygon)-1], polygon[0]))
 	return pointInsidePolygonLines(point, lines)
 
-# Angle between two lines originating at (0, 0). Lenght of lines must be greater than 0.
+# Angle between two lines originating at (0, 0). Length of lines must be greater than 0.
 def angle(pt1, pt2):
 	x1, y1 = pt1
 	x2, y2 = pt2
@@ -348,25 +368,6 @@ def findClosestUnobstructed(p, nodes, worldLines):
 				best = n
 				dist = d
 	return best
-
-#def findClosestUnobstructed(p, nodes, worldLines, worldPoints = [], threshold = 0.0):
-#	best = None
-#	dist = INFINITY
-#	for n in nodes:
-#		if rayTraceWorld(p, n, worldLines) == None:
-#			tooclose = False
-#			for p2 in worldPoints:
-#				if minimumDistance((p, n), p2) <= threshold:
-#					tooclose = True
-#					break
-#			if not tooclose:
-#				d = distance(p, n)
-#				if best == None or d < dist:
-#					best = n
-#					dist = d
-#	return best
-
-
 	
 def drawCross(surface, point, color = (0, 0, 0), size = 2, width = 1):
 	pygame.draw.line(surface, color, (point[0]-size, point[1]-size), (point[0]+size, point[1]+size), width)
