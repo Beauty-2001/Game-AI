@@ -135,7 +135,8 @@ def myCreatePathNetwork(world, agent = None):
         w_lines = world.getLines()
         l_lines = []
         # Center
-        l_nodes = set()
+        c_node = tuple([sum(x)/len(poly) for x in zip(*poly)])
+        l_nodes = set([c_node])
         # Midpoint of lines
         for i in xrange(-1, len(poly)-1):
             if not lineInSet(poly[i], poly[i+1], w_lines):

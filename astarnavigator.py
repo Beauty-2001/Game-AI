@@ -20,9 +20,9 @@ import sys, pygame, math, numpy, random, time, copy
 from pygame.locals import * 
 
 from constants import *
-from utils import *
+from utils import distance
 from core import *
-from mycreatepathnetwork import *
+from mycreatepathnetwork import myCreatePathNetwork
 from mynavigatorhelpers import *
 import heapq
 
@@ -38,11 +38,6 @@ class PriorityQueue(object):
     elements being served before lower priority elements.  If two elements have
     the same priority, they will be served in the order they were added to the
     queue.
-
-    Traditionally priority queues are implemented with heaps, but there are any
-    number of implementation options.
-
-    (Hint: take a look at the module heapq)
 
     Attributes:
         queue (list): Nodes added to the priority queue.
@@ -117,12 +112,6 @@ class PriorityQueue(object):
     def __contains__(self, key):
         """
         Containment Check operator for 'in'
-
-        Args:
-            key: The key to check for in the queue.
-
-        Returns:
-            True if key is found in queue, False otherwise.
         """
 
         return key in [n for _, n in self.queue]
@@ -130,12 +119,6 @@ class PriorityQueue(object):
     def __eq__(self, other):
         """
         Compare this Priority Queue with another Priority Queue.
-
-        Args:
-            other (PriorityQueue): Priority Queue to compare against.
-
-        Returns:
-            True if the two priority queues are equivalent.
         """
 
         return self == other
@@ -143,24 +126,17 @@ class PriorityQueue(object):
     def size(self):
         """
         Get the current size of the queue.
-
-        Returns:
-            Integer of number of items in queue.
         """
 
         return len(self.queue)
 
     def clear(self):
         """Reset queue to empty (no nodes)."""
-
         self.queue = []
 
     def top(self):
         """
         Get the top item in the queue.
-
-        Returns:
-            The first item stored in teh queue.
         """
 
         return self.queue[0]
@@ -257,10 +233,9 @@ def get_children(parent, network):
 
 def astar(init, goal, network):
     path = []
-    closed = [] # Another name for explored
+    closed = set() # Another name for explored
     ### YOUR CODE GOES BELOW HERE ###
     frontier = PriorityQueue()
-    explored = {}
     node_data = {}
     # Initialize frontier and node_data map with start state
     frontier.append((0, init))
@@ -276,13 +251,12 @@ def astar(init, goal, network):
                 parent = node_data[state][0]
             path.append(state)
             list.reverse(path)
-            closed = [i[1] for i in explored.values()]
             return path, closed
-        elif exploring[-1] in explored:
+        elif exploring[-1] in closed:
             continue
         parent = exploring[-1]
         children = get_children(parent, network)
-        explored[parent] = exploring
+        closed.add(exploring[1])
         parent_cost = node_data[parent][1]
         for state in children:
             g = distance(parent, state) + parent_cost
@@ -290,9 +264,8 @@ def astar(init, goal, network):
             cost = g + h
             if state not in node_data or node_data[state][1] > g:
                 node_data[state] = (parent, g)
-            if state not in explored:
+            if state not in closed:
                 frontier.append((cost, state))
-    closed = [i[1] for i in explored.values()]
 
     ### YOUR CODE GOES ABOVE HERE ###
     return path, closed
