@@ -247,7 +247,7 @@ def get_children(parent, network):
 
 def astar(init, goal, network):
     path = []
-    closed = set() # Another name for explored
+    closed = [] # Another name for explored
     ### YOUR CODE GOES BELOW HERE ###
     frontier = PriorityQueue()
     node_data = {}
@@ -271,7 +271,7 @@ def astar(init, goal, network):
         else:
             parent = exploring[-1]
             children = get_children(parent, network)
-            closed.add(exploring[1])
+            closed.append(exploring[1])
             parent_cost = node_data[parent][1]
             for state in children:
                 g = distance(parent, state) + parent_cost
