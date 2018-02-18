@@ -16,18 +16,17 @@
  * limitations under the License.
 '''
 
-import sys, pygame, math, numpy, random, time, copy
-from pygame.locals import * 
+import heapq
+from math import cos, sin
 
-from math import sin, cos
-from random import SystemRandom
+import numpy as np
+import pygame
 
-from constants import *
-from utils import distance
 from core import *
 from mycreatepathnetwork import myCreatePathNetwork
 from mynavigatorhelpers import *
-import heapq
+from utils import distance
+
 
 ###############################
 ### Priority Queue
@@ -320,4 +319,3 @@ def clearShot(p1, p2, worldLines, worldPoints, agent):
     ### YOUR CODE GOES BELOW HERE ###
     return rayTraceAgentDependent(p1, p2, worldLines, agent)
     ### YOUR CODE GOES ABOVE HERE ###
-
