@@ -168,6 +168,8 @@ class AStarNavigator(NavMeshNavigator):
     ### source: the place the agent is starting from (i.e., its current location)
     ### dest: the place the agent is told to go to
     def computePath(self, source, dest):
+        global current
+        current = 0
         self.setPath(None)
         ### Make sure the next and dist matrices exist
         if self.agent != None and self.world != None: 
@@ -223,7 +225,7 @@ def unobstructedNetwork(network, worldLines):
             newnetwork.append(l)
     return newnetwork
 
-
+# Obtains the child nodes of a given node
 def get_children(parent, network):
     children = []
     for line in network:
@@ -242,7 +244,7 @@ def astar(init, goal, network):
     # Initialize frontier and node_data map with start state
     frontier.append((0, init))
     node_data[init] = (None, 0)
-    while True:
+    while frontier.size():
         exploring = frontier.pop()
         if exploring[-1] == goal:
             state = exploring[-1]
@@ -256,18 +258,19 @@ def astar(init, goal, network):
             return path, closed
         elif exploring[-1] in closed:
             continue
-        parent = exploring[-1]
-        children = get_children(parent, network)
-        closed.add(exploring[1])
-        parent_cost = node_data[parent][1]
-        for state in children:
-            g = distance(parent, state) + parent_cost
-            h = distance(state, goal)
-            cost = g + h
-            if state not in node_data or node_data[state][1] > g:
-                node_data[state] = (parent, g)
-            if state not in closed:
-                frontier.append((cost, state))
+        else:
+            parent = exploring[-1]
+            children = get_children(parent, network)
+            closed.add(exploring[1])
+            parent_cost = node_data[parent][1]
+            for state in children:
+                g = distance(parent, state) + parent_cost
+                h = distance(state, goal)
+                cost = g + h
+                if state not in node_data or node_data[state][1] > g:
+                    node_data[state] = (parent, g)
+                if state not in closed:
+                    frontier.append((cost, state))
 
     ### YOUR CODE GOES ABOVE HERE ###
     return path, closed
@@ -281,11 +284,13 @@ def myUpdate(nav, delta):
     ### YOUR CODE GOES ABOVE HERE ###
     return None
 
-
-
 def myCheckpoint(nav):
     ### YOUR CODE GOES BELOW HERE ###
-
+    if nav.source == nav.destination:
+        return None
+    if nav.path and len(nav.path) > 2:
+        if rayTraceWorld(nav.path[0], nav.path[1], nav.world.getGates()):
+            nav.computePath(nav.agent.position, nav.destination)
     ### YOUR CODE GOES ABOVE HERE ###
     return None
 
@@ -297,37 +302,6 @@ def myCheckpoint(nav):
 ### agent: the Agent object
 def clearShot(p1, p2, worldLines, worldPoints, agent):
     ### YOUR CODE GOES BELOW HERE ###
-
-    line = (p1, p2)
-    x_axis = (1, 0)
-    edg_a = None
-    edg_b = None
-
-    dif_x = line[1][0] - line[0][0]
-    dif_y = line[1][1] - line[0][1]
-    # Get angle of line
-    ang = angle(x_axis, (dif_x, dif_y))
-    # Use angle of perpendicular to get offset for agent radius
-    x_delt = (agent.maxradius) * sin(ang)
-    y_delt = (agent.maxradius) * cos(ang)
-    if dif_y >= 0:
-        edg_a = ((line[0][0] + x_delt, line[0][1] - y_delt),
-                (line[1][0] + x_delt, line[1][1] - y_delt))
-        edg_b = ((line[0][0] - x_delt, line[0][1] + y_delt),
-                (line[1][0] - x_delt, line[1][1] + y_delt))
-    else:
-        edg_a = ((line[0][0] + x_delt, line[0][1] + y_delt),
-                (line[1][0] + x_delt, line[1][1] + y_delt))
-        edg_b = ((line[0][0] - x_delt, line[0][1] - y_delt),
-                (line[1][0] - x_delt, line[1][1] - y_delt))
-
-    # Now check rayTrace for created lines
-    # Check lines to see if agent size will cause collision during movement or at node
-    return not rayTraceWorldNoEndPoints(line[0], line[1], worldLines) \
-    and not rayTraceWorldNoEndPoints(edg_a[0], edg_a[1], worldLines) \
-    and not rayTraceWorldNoEndPoints(edg_b[0], edg_b[1], worldLines) \
-    and not rayTraceWorldNoEndPoints(edg_a[0], edg_b[1], worldLines)
-
+    return rayTraceAgentDependent(p1, p2, worldLines, agent)
     ### YOUR CODE GOES ABOVE HERE ###
-    return False
 

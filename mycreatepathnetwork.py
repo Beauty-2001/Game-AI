@@ -136,7 +136,7 @@ def myCreatePathNetwork(world, agent = None):
         l_lines = []
         # Center
         c_node = tuple([sum(x)/len(poly) for x in zip(*poly)])
-        l_nodes = set([c_node])
+        l_nodes = set([])
         # Midpoint of lines
         for i in xrange(-1, len(poly)-1):
             if not lineInSet(poly[i], poly[i+1], w_lines):
@@ -150,6 +150,12 @@ def myCreatePathNetwork(world, agent = None):
                           (poly[i][1] + poly[i+1][1]) / 2)
                 l_nodes.add(node_c)
                 l_lines += list(permutations([node_a, node_b, node_c], 2))
+        
+        # # Offshoots of corners
+        # for point in w_points:
+        #     node = ((3 * point[0] + c_node[0]) / 4,
+        #            (3 * point[1] + c_node[1]) / 4)
+        #     l_nodes.add(node)
 
         # Get edges
         p_lines = set(combinations(l_nodes, 2)).difference(l_lines)
@@ -182,11 +188,6 @@ def myCreatePathNetwork(world, agent = None):
                 appendLineNoDuplicates(line, edges)
                 nodes.add(line[0])
                 nodes.add(line[1])
-                drawCross(world.debug, line[0])
-                drawCross(world.debug, line[1])
-            else:
-                drawCross(world.debug, line[0], (255,0,0))
-                drawCross(world.debug, line[1], (255,0,0))
 
     ### YOUR CODE GOES ABOVE HERE ###
     return nodes, edges, polys
