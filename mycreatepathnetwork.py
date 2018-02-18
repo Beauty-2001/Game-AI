@@ -18,9 +18,10 @@
 
 import sys, pygame, math, numpy, random, time, copy, operator
 
-from utils import rayTraceWorldNoEndPoints, pointInsidePolygonPoints, polygonsAdjacent, isConvex, appendLineNoDuplicates, angle, drawCross, reverseLine
+from utils import rayTraceWorldNoEndPoints, pointInsidePolygonPoints, polygonsAdjacent, isConvex, appendLineNoDuplicates, angle, drawCross, reverseLine, distance
 from itertools import permutations, combinations
 from math import sin, cos
+from mynavigatorhelpers import rayTraceAgentDependent
 
 def lineInSet(p0, p1, lines):
     return lines.count((p0, p1)) or lines.count((p1,p0))
@@ -136,7 +137,7 @@ def myCreatePathNetwork(world, agent = None):
         l_lines = []
         # Center
         c_node = tuple([sum(x)/len(poly) for x in zip(*poly)])
-        l_nodes = set([])
+        l_nodes = set()
         # Midpoint of lines
         for i in xrange(-1, len(poly)-1):
             if not lineInSet(poly[i], poly[i+1], w_lines):
@@ -151,15 +152,22 @@ def myCreatePathNetwork(world, agent = None):
                 l_nodes.add(node_c)
                 l_lines += list(permutations([node_a, node_b, node_c], 2))
         
-        # # Offshoots of corners
-        # for point in w_points:
-        #     node = ((3 * point[0] + c_node[0]) / 4,
-        #            (3 * point[1] + c_node[1]) / 4)
-        #     l_nodes.add(node)
-
         # Get edges
+        nodes.add(c_node)
+        for node in l_nodes:
+            if rayTraceAgentDependent(c_node, node, w_lines, agent):
+                appendLineNoDuplicates((c_node, node), edges)
+                nodes.add(node)
+
+        # Offshoots of corners
+        # for point in w_points:
+        #     node = ((point[0] + c_node[0]) / 2,
+        #            (point[1] + c_node[1]) / 2)
+        #     l_nodes.add(node)
         p_lines = set(combinations(l_nodes, 2)).difference(l_lines)
         for line in p_lines:
+            # if distance(line[0], line[1]) > max([distance(line[0], c_node), distance(line[1], c_node)]):
+            #     continue
             dif_x = line[1][0] - line[0][0]
             dif_y = line[1][1] - line[0][1]
             # Get angle of line
@@ -180,10 +188,7 @@ def myCreatePathNetwork(world, agent = None):
 
             # Now check rayTrace for created lines
             # Check lines to see if agent size will cause collision during movement or at node
-            if not rayTraceWorldNoEndPoints(line[0], line[1], w_lines) \
-            and not rayTraceWorldNoEndPoints(edg_a[0], edg_a[1], w_lines) \
-            and not rayTraceWorldNoEndPoints(edg_b[0], edg_b[1], w_lines) \
-            and not rayTraceWorldNoEndPoints(edg_a[0], edg_b[1], w_lines) \
+            if rayTraceAgentDependent(line[0], line[1], w_lines, agent) \
             and not rayTraceWorldNoEndPoints(line[0], line[1], edges):
                 appendLineNoDuplicates(line, edges)
                 nodes.add(line[0])

@@ -20,6 +20,7 @@ import sys, pygame, math, numpy, random, time, copy
 from pygame.locals import * 
 
 from math import sin, cos
+from random import SystemRandom
 
 from constants import *
 from utils import distance
@@ -186,8 +187,8 @@ class AStarNavigator(NavMeshNavigator):
             if clearShot(source, dest, self.world.getLines(), self.world.getPoints(), self.agent):
                 self.agent.moveToTarget(dest)
             else:
-                start = findClosestUnobstructed(source, self.pathnodes, self.world.getLinesWithoutBorders())
-                end = findClosestUnobstructed(dest, self.pathnodes, self.world.getLinesWithoutBorders())
+                start = findClosestUnobstructed(source, self.pathnodes, self.world.getLinesWithoutBorders(), self.agent)
+                end = findClosestUnobstructed(dest, self.pathnodes, self.world.getLinesWithoutBorders(), self.agent)
                 if start != None and end != None:
                     # print len(self.pathnetwork)
                     newnetwork = unobstructedNetwork(self.pathnetwork, self.world.getGates())
@@ -200,6 +201,16 @@ class AStarNavigator(NavMeshNavigator):
                         if self.path is not None and len(self.path) > 0:
                             first = self.path.pop(0)
                             self.agent.moveToTarget(first)
+                    else:
+                        # Otherwise wander
+                        wander_radius = 100
+                        dest = (np.random.randint(start[0]-wander_radius, start[0]+wander_radius), 
+                                np.random.randint(start[1]-wander_radius, start[1]+wander_radius))
+                        while insideObstacle(dest, self.world.getObstacles()):
+                            dest = (np.random.randint(start[0]-wander_radius, start[0]+wander_radius), 
+                                    np.random.randint(start[1]-wander_radius, start[1]+wander_radius))
+                        self.agent.moveToTarget(dest)
+
         return None
         
     ### Called when the agent gets to a node in the path.
@@ -274,23 +285,28 @@ def astar(init, goal, network):
 
     ### YOUR CODE GOES ABOVE HERE ###
     return path, closed
-    
-    
 
-
+t = 0
 def myUpdate(nav, delta):
     ### YOUR CODE GOES BELOW HERE ###
-
+    global t
+    t += delta
+    if t > 500:
+        myCheckpoint(nav)
     ### YOUR CODE GOES ABOVE HERE ###
     return None
 
 def myCheckpoint(nav):
     ### YOUR CODE GOES BELOW HERE ###
-    if nav.source == nav.destination:
-        return None
-    if nav.path and len(nav.path) > 2:
-        if rayTraceWorld(nav.path[0], nav.path[1], nav.world.getGates()):
-            nav.computePath(nav.agent.position, nav.destination)
+    global t
+    t = 0
+    agent_loc = nav.agent.position
+    gates = nav.world.getGates()
+    if rayTraceWorld(agent_loc, nav.agent.moveTarget, gates):
+        nav.computePath(agent_loc, nav.destination)
+    elif nav.path and len(nav.path) > 2:
+        if rayTraceWorld(nav.path[0], nav.path[1], gates):
+            nav.computePath(agent_loc, nav.destination)
     ### YOUR CODE GOES ABOVE HERE ###
     return None
 
