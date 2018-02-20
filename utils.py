@@ -88,7 +88,7 @@ def getIntersectPoint(p1, p2, p3, p4):
 				x = p3[0]
 				y = (m1 * x) + b1           
 			else:
-				assert False
+				assert false
               
 		return ((x,y),)
 	else:
