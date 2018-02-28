@@ -1,3 +1,4 @@
+__author__ = "jacob logas"
 '''
  * Copyright (c) 2014, 2015 Entertainment Intelligence Lab, Georgia Institute of Technology.
  * Originally developed by Mark Riedl.
@@ -24,6 +25,15 @@ from utils import *
 from core import *
 from moba import *
 
+# Health variable used to provide friendlies information on their comrades' status
+ally_health = {"healthy": [], "moderate": [], "danger": []}
+
+# Allows for grouping of allies and coordinated attacks
+squads = []
+
+# Live friendly minion count
+alive = 0
+
 class MyMinion(Minion):
 	
 	def __init__(self, position, orientation, world, image = NPC, speed = SPEED, viewangle = 360, hitpoints = HITPOINTS, firerate = FIRERATE, bulletclass = SmallBullet):
@@ -31,6 +41,7 @@ class MyMinion(Minion):
 		self.states = [Idle]
 		### Add your states to self.states (but don't remove Idle)
 		### YOUR CODE GOES BELOW HERE ###
+		self.target = None
 
 		### YOUR CODE GOES ABOVE HERE ###
 
@@ -80,3 +91,107 @@ class Taunt(State):
 ##############################
 ### YOUR STATES GO HERE:
 
+##############################
+### Attack
+###
+### Shoots at the minion's target
+### 
+
+class Attack(State):
+	def parseArgs(self, args):
+		pass
+	
+	def execute(self, delta = 0):
+		pass
+
+##############################
+### Move
+###
+### Move to the given position
+### interruptable: argument that if true allows the
+### agent to disregard its direction
+
+class Move(State):
+	def parseArgs(self, args):
+		pass
+	
+	def execute(self, delta = 0):
+		pass
+
+##############################
+### Retreat
+###
+### Runs away from combat to a safer location
+### 
+
+class Retreat(State):
+	def parseArgs(self, args):
+		pass
+	
+	def execute(self, delta = 0):
+		pass
+
+##############################
+### Pursue
+###
+### Follows the target enemy agent within attacking distance
+###
+
+class Pursue(State):
+	def parseArgs(self, args):
+		pass
+	
+	def execute(self, delta = 0):
+		pass
+
+##############################
+### Flank
+###
+### Find path with least amount of enemies
+### 
+
+class Flank(State):
+	def parseArgs(self, args):
+		pass
+	
+	def execute(self, delta = 0):
+		pass
+
+##############################
+### Support
+###
+### Group up with a struggling ally and attack its target
+###
+
+class Support(State):
+	def parseArgs(self, args):
+		pass
+	
+	def execute(self, delta = 0):
+		pass
+
+##############################
+### Defend
+###
+### Stay at the base and attack enemies who get within
+### some distance of base
+
+class Support(State):
+	def parseArgs(self, args):
+		pass
+	
+	def execute(self, delta = 0):
+		pass
+
+##############################
+### Dodge
+###
+### While attacking, if a bullet is far enough away
+### to be dodged then move out of its way.
+
+class Support(State):
+	def parseArgs(self, args):
+		pass
+	
+	def execute(self, delta = 0):
+		pass
