@@ -38,20 +38,18 @@ class MyMinion(Minion):
 	
 	def __init__(self, position, orientation, world, image = NPC, speed = SPEED, viewangle = 360, hitpoints = HITPOINTS, firerate = FIRERATE, bulletclass = SmallBullet):
 		Minion.__init__(self, position, orientation, world, image, speed, viewangle, hitpoints, firerate, bulletclass)
-		self.states = [Idle]
+		# self.states = [Idle]
 		### Add your states to self.states (but don't remove Idle)
 		### YOUR CODE GOES BELOW HERE ###
 		self.target = None
-
+		# If the state has finished
+		self.state_finished = True
+		self.states = [Idle, Attack, Move, Retreat, Pursue, Flank, Support, Defend, Dodge]
 		### YOUR CODE GOES ABOVE HERE ###
 
 	def start(self):
 		Minion.start(self)
 		self.changeState(Idle)
-
-
-
-
 
 ############################
 ### Idle
@@ -68,7 +66,32 @@ class Idle(State):
 	def execute(self, delta = 0):
 		State.execute(self, delta)
 		### YOUR CODE GOES BELOW HERE ###
-
+		# First check if bullets are directed at you and dodge if so
+		team = self.agent.getTeam()
+		# TODO: Test this gets only bullets pointing at the agent
+		bullets = [bullet.getTeam() != team and\
+				   numpy.isclose(bullet.getOrientation(), \
+				   angle(self.agent.getPosition(), bullet.getPosition))\
+				   for bullet in self.agent.getVisibleType(MOBABullet)]
+		enemies = [enemy.getTeam() != team and \
+				   type(enemy) != MOBABullet for enemy \
+				   in self.agent.getVisible()]
+		if bullets:
+			self.agent.changeState(Dodge, bullets)
+		# Then if you have a target and its in range, attack it or pursue if not in range
+		elif self.agent.target:
+			if distance(self.agent.target.position, self.agent.position) <= BULLETRANGE:
+				self.agent.changeState(Attack, self.agent.target)
+			else:
+				self.agent.changeState(Pursue, self.agent.target)
+		# TODO: If you dont have a target, find an in-range enemy and attack closest
+		elif not self.agent.target and enemies:
+			self.agent.changeState(LockOn, enemies)
+		# TODO: If no targets are available, check what your role is
+		elif not enemies:
+			# TODO: If you are offense, support low health allies or continue toward base
+			# TODO: If you are part of the backup, support medium health attackers or flank
+			# TODO: If you are defense, stay at the base and wait
 		### YOUR CODE GOES ABOVE HERE ###
 		return None
 
@@ -176,7 +199,7 @@ class Support(State):
 ### Stay at the base and attack enemies who get within
 ### some distance of base
 
-class Support(State):
+class Defend(State):
 	def parseArgs(self, args):
 		pass
 	
@@ -189,7 +212,20 @@ class Support(State):
 ### While attacking, if a bullet is far enough away
 ### to be dodged then move out of its way.
 
-class Support(State):
+class Dodge(State):
+	def parseArgs(self, args):
+		pass
+	
+	def execute(self, delta = 0):
+		pass
+
+##############################
+### LockOn
+###
+### Finds a new target and begins to attack or pursue
+### 
+
+class LockOn(State):
 	def parseArgs(self, args):
 		pass
 	
