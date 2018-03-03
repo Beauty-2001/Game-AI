@@ -1,223 +1,198 @@
+'''
+ * Copyright (c) 2014, 2015 Entertainment Intelligence Lab, Georgia Institute of Technology.
+ * Originally developed by Mark Riedl.
+ * Last edited by Mark Riedl 05/2015
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+'''
+
 import sys, pygame, math, numpy, random, time, copy, operator
-from pygame.locals import *
 
-from constants import *
-from utils import *
-from core import *
+from utils import rayTraceWorldNoEndPoints, pointInsidePolygonPoints, polygonsAdjacent, isConvex, appendLineNoDuplicates, angle, drawCross, reverseLine, distance
+from itertools import permutations, combinations
+from math import sin, cos
+from mynavigatorhelpers import rayTraceAgentDependent
 
-def myCreatePathNetwork (OO00OO0OOOO0OO0OO ,O00OO000OO0O00O00 =None ):#line:1
-	OOO0000O00O0O0OOO =[]#line:2
-	O0OO0OO0O0O0OO00O =[]#line:3
-	OO0O0O0OOOO0O0O00 =[]#line:4
-	OO0000O0O000OOO0O =[]#line:6
-	OO0O0O0OOOO0O0O00 =computePolygons (OO00OO0OOOO0OO0OO )#line:7
-	O0O0O000OOO0O0OO0 =[]#line:11
-	for OOO00000OO000O0O0 in OO0O0O0OOOO0O0O00 :#line:12
-		OOO0000O00O0O0OOO =[]#line:13
-		O00O000OO0O00OO0O =None #line:14
-		for O0O0O0O00OO0O0O00 in OOO00000OO000O0O0 :#line:15
-			if O00O000OO0O00OO0O !=None :#line:16
-				O000O0OO00000OOOO =((O00O000OO0O00OO0O [0 ]+O0O0O0O00OO0O0O00 [0 ])/2.0 ,(O00O000OO0O00OO0O [1 ]+O0O0O0O00OO0O0O00 [1 ])/2.0 )#line:18
-				O0OOOOO00O00OOOOO =False #line:19
-				for O0000OOOO0O000O00 in OO0O0O0OOOO0O0O00 :#line:20
-					for OO000OO00O0O0OOOO in O0000OOOO0O000O00 :#line:21
-						if distance (O000O0OO00000OOOO ,OO000OO00O0O0OOOO )<OO00OO0OOOO0OO0OO .agent .getMaxRadius () :#line:22
-							O0OOOOO00O00OOOOO =True #line:23
-				if not O0OOOOO00O00OOOOO :
-					for O0OOOOO00O00OOOO0 in OO00OO0OOOO0OO0OO .getLinesWithoutBorders () :
-						if minimumDistance (O0OOOOO00O00OOOO0 ,O000O0OO00000OOOO)<OO00OO0OOOO0OO0OO .agent .getMaxRadius () :
-							O0OOOOO00O00OOOOO =True
-							break
-				if not O0OOOOO00O00OOOOO :#line:24
-					OOO0000O00O0O0OOO .append (O000O0OO00000OOOO )#line:25
-					OO0000O0O000OOO0O .append (O000O0OO00000OOOO )
-			O00O000OO0O00OO0O =O0O0O0O00OO0O0O00 #line:26
-		O000O0OO00000OOOO =((OOO00000OO000O0O0 [0 ][0 ]+OOO00000OO000O0O0 [len (OOO00000OO000O0O0 )-1 ][0 ])/2.0 ,(OOO00000OO000O0O0 [0 ][1 ]+OOO00000OO000O0O0 [len (OOO00000OO000O0O0 )-1 ][1 ])/2.0 )#line:28
-		O0OOOOO00O00OOOOO =False #line:29
-		for O0000OOOO0O000O00 in OO0O0O0OOOO0O0O00 :#line:30
-			for OO000OO00O0O0OOOO in O0000OOOO0O000O00 :#line:31
-				if distance (O000O0OO00000OOOO ,OO000OO00O0O0OOOO )<OO00OO0OOOO0OO0OO .agent .getMaxRadius () :#line:32
-					O0OOOOO00O00OOOOO =True #line:33
-		if not O0OOOOO00O00OOOOO :
-			for O0OOOOO00O00OOOO0 in OO00OO0OOOO0OO0OO .getLinesWithoutBorders () :
-				if minimumDistance (O0OOOOO00O00OOOO0 ,O000O0OO00000OOOO)<OO00OO0OOOO0OO0OO .agent .getMaxRadius () :
-					O0OOOOO00O00OOOOO =True
-					break
-		if not O0OOOOO00O00OOOOO :#line:34
-			OOO0000O00O0O0OOO .append (O000O0OO00000OOOO )#line:35
-			OO0000O0O000OOO0O .append (O000O0OO00000OOOO )
-		O0O0O000OOO0O0OO0 .append ((OOO00000OO000O0O0 ,OOO0000O00O0O0OOO ))#line:36
-	for OO0000OO00OOOOOO0 in O0O0O000OOO0O0OO0 :#line:37
-		for OO00O0O00OOO00O00 in OO0000OO00OOOOOO0 [1 ]:#line:38
-			for OO00O000OO000OO00 in OO0000OO00OOOOOO0 [1 ]:#line:39
-				if OO00O0O00OOO00O00 !=OO00O000OO000OO00 :#line:40
-					OO0O0OOOO0O00O00O =True #line:41
-					for OO000OOOO0O0O00O0 in OO00OO0OOOO0OO0OO .obstacles :#line:42
-						if pointOnPolygon (OO00O0O00OOO00O00 ,OO000OOOO0O0O00O0 .getPoints ())or pointOnPolygon (OO00O000OO000OO00 ,OO000OOOO0O0O00O0 .getPoints ()):#line:43
-							OO0O0OOOO0O00O00O =False #line:44
-					if OO0O0OOOO0O00O00O :#line:45
-						OO0O0OOO0O0O0OOOO =(OO00O0O00OOO00O00 ,OO00O000OO000OO00 )#line:46
-						OO0OOOO00OOOO000O =False #line:48
-						for OO00OO0OO00000O00 in O0OO0OO0O0O0OO00O :#line:49
-							if (OO00OO0OO00000O00 [0 ]==OO0O0OOO0O0O0OOOO [0 ]and OO00OO0OO00000O00 [1 ]==OO0O0OOO0O0O0OOOO [1 ])or (OO00OO0OO00000O00 [0 ]==OO0O0OOO0O0O0OOOO [1 ]and OO00OO0OO00000O00 [1 ]==OO0O0OOO0O0O0OOOO [0 ]):#line:50
-								OO0OOOO00OOOO000O =True #line:51
-						if not OO0OOOO00OOOO000O :#line:52
-							O0OOOOO00O00OOOOO =False #line:54
-							for O0O00O0O000O00OOO in OO00OO0OOOO0OO0OO .getPoints ():#line:55
-								if minimumDistance (OO0O0OOO0O0O0OOOO ,O0O00O0O000O00OOO )<OO00OO0OOOO0OO0OO .agent .getMaxRadius () :#line:56
-									O0OOOOO00O00OOOOO =True #line:57
-							if not O0OOOOO00O00OOOOO :#line:58
-								O0OO0OO0O0O0OO00O .append (OO0O0OOO0O0O0OOOO )#line:60
-								OO0000O0O000OOO0O .append (OO00O0O00OOO00O00 )#line:61
-								OO0000O0O000OOO0O .append (OO00O000OO000OO00 )#line:62
-	O0O0O00O0000O0000 ,OOOO0OO000OO0OOO0 =foox (OO0000O0O000OOO0O ,O0OO0OO0O0O0OO00O )#line:85
-	for O0O0O0O00OO0O0O00 in OO0000O0O000OOO0O :#line:86
-		if (map (lambda O0O0OO00OO00OO0O0 :O0O0OO00OO00OO0O0 [0 ],O0OO0OO0O0O0OO00O )+map (lambda O00OOO0OOOO00O00O :O00OOO0OOOO00O00O [1 ],O0OO0OO0O0O0OO00O )).count (O0O0O0O00OO0O0O00 )==1 :#line:87
-			OO000O0O0OO0OO0O0 =sorted (OOOO0OO000OO0OOO0 .items (),key =operator .itemgetter (1 ))#line:89
-			OO000O0O0OO0OO0O0 .reverse ()#line:90
-			for O0O00OO0OOO0000O0 in OO000O0O0OO0OO0O0 :#line:91
-				if O0O0O0O00OO0O0O00 !=O0O00OO0OOO0000O0 [0 ] :
-					OOOOOOOO000O00OO0 =rayTraceWorld (O0O0O0O00OO0O0O00 ,O0O00OO0OOO0000O0 [0 ],OO00OO0OOOO0OO0OO .getLinesWithoutBorders ())#line:92
-					if OOOOOOOO000O00OO0 ==None :#line:93
-						OO0O0OOO0O0O0OOOO =(O0O0O0O00OO0O0O00 ,O0O00OO0OOO0000O0 [0 ])#line:94
-						O0OOOOO00O00OOOOO =False #line:95
-						for OO000OO00O0O0OOOO in OO00OO0OOOO0OO0OO .getPoints ():#line:96
-							if minimumDistance (OO0O0OOO0O0O0OOOO ,OO000OO00O0O0OOOO )<OO00OO0OOOO0OO0OO .agent .getMaxRadius () :#line:97
-								O0OOOOO00O00OOOOO =True #line:98
-								break #line:99
-						if not O0OOOOO00O00OOOOO :#line:100
-							O0OO0OO0O0O0OO00O .append (OO0O0OOO0O0O0OOOO )#line:101
-							break #line:102
-	O0O0O00O0000O000O =set ()
-	for O0O0O0O00OO0O0O00 in OO0000O0O000OOO0O :
-		if (map (lambda O0O0OO00OO00OO0O0 :O0O0OO00OO00OO0O0 [0 ],O0OO0OO0O0O0OO00O )+map (lambda O00OOO0OOOO00O00O :O00OOO0OOOO00O00O [1 ],O0OO0OO0O0O0OO00O )).count (O0O0O0O00OO0O0O00 )==0 :
-			O0O0O00O0000O000O .add (O0O0O0O00OO0O0O00)
-	OO0000O0O000OOO0O =list (set (OO0000O0O000OOO0O )-O0O0O00O0000O000O)
-	OOO0000O00O0O0OOO =OO0000O0O000OOO0O
-	return OOO0000O00O0O0OOO ,O0OO0OO0O0O0OO00O ,OO0O0O0OOOO0O0O00 #line:104
-def computePolygons (OOOO0O000O0OO0O00 ):#line:107
-	OO0OO0O00000OO00O =[]#line:108
-	O00OO00O00OO0O0OO =OOOO0O000O0OO0O00 .getPoints ()#line:109
-	OOO0O0OOOOO000000 =OOOO0O000O0OO0O00 .getLines ()#line:110
-	corerandom .shuffle (O00OO00O00OO0O0OO )#line:111
-	for OOO00O0OOO00O00O0 in O00OO00O00OO0O0OO :#line:112
-		for O0OOOOOO0O0OO0000 in O00OO00O00OO0O0OO :#line:113
-			if OOO00O0OOO00O00O0 !=O0OOOOOO0O0OO0000 :#line:114
-				OO000O00O0OOOO00O =rayTraceWorldNoEndPoints (OOO00O0OOO00O00O0 ,O0OOOOOO0O0OO0000 ,OOO0O0OOOOO000000 )#line:115
-				if OO000O00O0OOOO00O ==None :#line:116
-					appendLineNoDuplicates ((OOO00O0OOO00O00O0 ,O0OOOOOO0O0OO0000 ),OOO0O0OOOOO000000 )#line:117
-	for OOO00O0OOO00O00O0 in O00OO00O00OO0O0OO :#line:120
-		O0OO0OO0OO0OOOO00 =successorPoints (OOO00O0OOO00O00O0 ,OOO0O0OOOOO000000 )#line:121
-		for O0OOOOOO0O0OO0000 in O0OO0OO0OO0OOOO00 :#line:122
-			OO000OOO000O0O0OO =successorPoints (O0OOOOOO0O0OO0000 ,OOO0O0OOOOO000000 )#line:123
-			for OOOOOO0O00OOOO00O in OO000OOO000O0O0OO :#line:124
-				OO0OOOOOOO00OO0OO =successorPoints (OOOOOO0O00OOOO00O ,OOO0O0OOOOO000000 )#line:125
-				for OO00O00OOO00O00OO in OO0OOOOOOO00OO0OO :#line:126
-					if OO00O00OOO00O00OO ==OOO00O0OOO00O00O0 :#line:127
-						OO0OO0O00000OO00O .append ((OOO00O0OOO00O00O0 ,O0OOOOOO0O0OO0000 ,OOOOOO0O00OOOO00O ))#line:128
-	OO0OO0O00000OO00O =map (lambda OOOOO00OOOO00000O :tuple (sorted (OOOOO00OOOO00000O )),OO0OO0O00000OO00O )#line:130
-	OO0OO0O00000OO00O =list (set (OO0OO0O00000OO00O ))#line:131
-	O0O00O00OO0O00O0O =[]#line:133
-	for OOOOO0OO000OOOO0O in OO0OO0O00000OO00O :#line:134
-		O00O000O0OOOO0000 =True #line:136
-		for O00000000000OO0O0 in OOOO0O000O0OO0O00 .obstacles :#line:137
-			if O00O000O0OOOO0000 ==True :#line:138
-				if O00000000000OO0O0 .isInPoints (OOOOO0OO000OOOO0O [0 ])and O00000000000OO0O0 .isInPoints (OOOOO0OO000OOOO0O [1 ])and O00000000000OO0O0 .isInPoints (OOOOO0OO000OOOO0O [2 ]):#line:139
-					if pointInsidePolygonPoints ((sum (map (lambda OO00OOO0000OO000O :OO00OOO0000OO000O [0 ],OOOOO0OO000OOOO0O ))/3.0 ,sum (map (lambda OO0OOOOO0O0000OO0 :OO0OOOOO0O0000OO0 [1 ],OOOOO0OO000OOOO0O ))/3.0 ),O00000000000OO0O0 .getPoints ()):#line:140
-						O00O000O0OOOO0000 =False #line:141
-		if O00O000O0OOOO0000 ==True :#line:148
-			O0O00O00OO0O00O0O .append (OOOOO0OO000OOOO0O )#line:149
-	O00O0000O0OOO000O =[]#line:150
-	for OO0OO00O0O00OOO00 in O0O00O00OO0O00O0O :#line:152
-		O00O000O0OOOO0000 =True #line:153
-		for OOOOO0O00OOOOO0O0 in O0O00O00OO0O00O0O :#line:154
-			if OO0OO00O0O00OOO00 !=OOOOO0O00OOOOO0O0 and O00O000O0OOOO0000 ==True :#line:155
-				O0OOOOOO0O0OO000O =list (set (OOOOO0O00OOOOO0O0 )-set (OO0OO00O0O00OOO00 ))#line:156
-				if len (O0OOOOOO0O0OO000O )==1 :#line:157
-					OO0OOO00O0O0O0OOO =O0OOOOOO0O0OO000O [0 ]#line:158
-					if pointInsidePolygonPoints (OO0OOO00O0O0O0OOO ,OO0OO00O0O00OOO00 ):#line:159
-						O00O000O0OOOO0000 =False #line:160
-		if O00O000O0OOOO0000 :#line:161
-			O00O0000O0OOO000O .append (OO0OO00O0O00OOO00 )#line:162
-	OOOOO0OOOO0000OOO =O00O0000O0OOO000O #line:167
-	OOOOO0O000O00O00O =[]#line:170
-	O0OO0O0O00O000OOO =[]#line:171
-	for OOO00OO0O0O0O0O00 in OOOOO0OOOO0000OOO :#line:172
-		for O0O0OO0OOOO00O000 in OOOOO0OOOO0000OOO :#line:173
-			if OOO00OO0O0O0O0O00 !=O0O0OO0OOOO00O000 and O0O0OO0OOOO00O000 not in O0OO0O0O00O000OOO and OOO00OO0O0O0O0O00 not in O0OO0O0O00O000OOO :#line:174
-				if polygonsAdjacent (OOO00OO0O0O0O0O00 ,O0O0OO0OOOO00O000 ):#line:175
-					O0OOOO0O0O000OOO0 =tuple (set (list (OOO00OO0O0O0O0O00 )+list (O0O0OO0OOOO00O000 )))#line:176
-					if isConvex (O0OOOO0O0O000OOO0 ):#line:177
-						OOOOO0O000O00O00O .append (O0OOOO0O0O000OOO0 )#line:178
-						O0OO0O0O00O000OOO .append (OOO00OO0O0O0O0O00 )#line:179
-						O0OO0O0O00O000OOO .append (O0O0OO0OOOO00O000 )#line:180
-						break #line:181
-	OOOOO0OOOO0000OOO =OOOOO0O000O00O00O +list (set (OOOOO0OOOO0000OOO )-set (O0OO0O0O00O000OOO ))#line:182
-	return OOOOO0OOOO0000OOO #line:183
-def polygonsOverlap (O0O0OOO0000O0OO00 ,O0OO000O00O00OO0O ):#line:197
-	OO000OOOOOOO0OO0O =[]#line:198
-	O0OO0000O0000O0O0 =[]#line:200
-	OOO0O0O00000O0OOO =None #line:201
-	for O00O0000OO0000O0O in O0O0OOO0000O0OO00 :#line:202
-		if OOO0O0O00000O0OOO !=None :#line:203
-			O0OO0000O0000O0O0 .append ((OOO0O0O00000O0OOO ,O00O0000OO0000O0O ))#line:204
-		OOO0O0O00000O0OOO =O00O0000OO0000O0O #line:205
-	O0OO0000O0000O0O0 .append ((O0O0OOO0000O0OO00 [0 ],O0O0OOO0000O0OO00 [len (O0O0OOO0000O0OO00 )-1 ]))#line:206
-	O0OOO00O000OO0O00 =[]#line:208
-	OOO0O0O00000O0OOO =None #line:209
-	for O00O0000OO0000O0O in O0OO000O00O00OO0O :#line:210
-		if OOO0O0O00000O0OOO !=None :#line:211
-			O0OOO00O000OO0O00 .append ((OOO0O0O00000O0OOO ,O00O0000OO0000O0O ))#line:212
-		OOO0O0O00000O0OOO =O00O0000OO0000O0O #line:213
-	O0OOO00O000OO0O00 .append ((O0OO000O00O00OO0O [0 ],O0OO000O00O00OO0O [len (O0OO000O00O00OO0O )-1 ]))#line:214
-	for O0OO00OO0O0OOOOOO in O0OO0000O0000O0O0 :#line:216
-		O000O0OOOOOOOO0O0 =(sum (map (lambda OO0000000O00OO0OO :OO0000000O00OO0OO [0 ],O0OO00OO0O0OOOOOO ))/2.0 ,sum (map (lambda O0O00000000O0OO00 :O0O00000000O0OO00 [1 ],O0OO00OO0O0OOOOOO ))/2.0 )#line:217
-		if pointInsidePolygonLines (O000O0OOOOOOOO0O0 ,O0OOO00O000OO0O00 ):#line:218
-			OO000OOOOOOO0OO0O .append (O0OO00OO0O0OOOOOO [0 ])#line:219
-			OO000OOOOOOO0OO0O .append (O0OO00OO0O0OOOOOO [1 ])#line:220
-	if len (OO000OOOOOOO0OO0O )>0 :#line:221
-		return OO000OOOOOOO0OO0O #line:222
-	else :#line:223
-		return False #line:224
-def successorPoints (O0000000OO0O00OO0 ,O0O0OOO00OOOOOO00 ):#line:229
-	OOOO0O00OO0OOO00O =set ()#line:230
-	for OO0O00OOOO0OO0000 in O0O0OOO00OOOOOO00 :#line:231
-		if (OO0O00OOOO0OO0000 [0 ]==O0000000OO0O00OO0 ):#line:232
-			OOOO0O00OO0OOO00O .add (OO0O00OOOO0OO0000 [1 ])#line:233
-		elif (OO0O00OOOO0OO0000 [1 ]==O0000000OO0O00OO0 ):#line:234
-			OOOO0O00OO0OOO00O .add (OO0O00OOOO0OO0000 [0 ])#line:235
-	return list (OOOO0O00OO0OOO00O )#line:236
-def foox (O00O0OOOO0OOO0OOO ,O00O000OO00000OOO ):#line:242
-	OO0O00000000O0000 ={}#line:243
-	OOO0OO0000O00OOO0 ={}#line:244
-	for OO0O0OOO0000O0O00 in O00O0OOOO0OOO0OOO :#line:245
-		OOO0OO0000O00OOO0 [OO0O0OOO0000O0O00 ]={}#line:246
-		OO0O00000000O0000 [OO0O0OOO0000O0O00 ]={}#line:247
-	for OOOOOOOOO000000OO in O00O0OOOO0OOO0OOO :#line:249
-		for O0OO00OO0OOO0000O in O00O0OOOO0OOO0OOO :#line:250
-			OOO0OO0000O00OOO0 [OOOOOOOOO000000OO ][O0OO00OO0OOO0000O ]=None #line:251
-			OOO0OO0000O00OOO0 [O0OO00OO0OOO0000O ][OOOOOOOOO000000OO ]=None #line:252
-			if OOOOOOOOO000000OO ==O0OO00OO0OOO0000O :#line:253
-				OO0O00000000O0000 [OOOOOOOOO000000OO ][O0OO00OO0OOO0000O ]=0 #line:254
-				OO0O00000000O0000 [O0OO00OO0OOO0000O ][OOOOOOOOO000000OO ]=0 #line:255
-			else :#line:256
-				OO0O00000000O0000 [OOOOOOOOO000000OO ][O0OO00OO0OOO0000O ]=INFINITY #line:257
-				OO0O00000000O0000 [O0OO00OO0OOO0000O ][OOOOOOOOO000000OO ]=INFINITY #line:258
-	OOOO000O0OO0O0OO0 =INFINITY #line:259
-	for OO0O0OO0O0OOO0OOO in O00O000OO00000OOO :#line:260
-		OOOO000O0OO0O0OO0 =distance (OO0O0OO0O0OOO0OOO [0 ],OO0O0OO0O0OOO0OOO [1 ])#line:261
-		OO0O00000000O0000 [OO0O0OO0O0OOO0OOO [0 ]][OO0O0OO0O0OOO0OOO [1 ]]=OOOO000O0OO0O0OO0 #line:262
-		OO0O00000000O0000 [OO0O0OO0O0OOO0OOO [1 ]][OO0O0OO0O0OOO0OOO [0 ]]=OOOO000O0OO0O0OO0 #line:263
-	for OO0O0000OO00OO000 in O00O0OOOO0OOO0OOO :#line:264
-		for O000O0O00000OOOO0 in O00O0OOOO0OOO0OOO :#line:265
-			for O000OO00O00OO0000 in O00O0OOOO0OOO0OOO :#line:266
-				if OO0O00000000O0000 [O000O0O00000OOOO0 ][OO0O0000OO00OO000 ]+OO0O00000000O0000 [OO0O0000OO00OO000 ][O000OO00O00OO0000 ]<OO0O00000000O0000 [O000O0O00000OOOO0 ][O000OO00O00OO0000 ]:#line:267
-					OO0O00000000O0000 [O000O0O00000OOOO0 ][O000OO00O00OO0000 ]=OO0O00000000O0000 [O000O0O00000OOOO0 ][OO0O0000OO00OO000 ]+OO0O00000000O0000 [OO0O0000OO00OO000 ][O000OO00O00OO0000 ]#line:268
-					OOO0OO0000O00OOO0 [O000O0O00000OOOO0 ][O000OO00O00OO0000 ]=OO0O0000OO00OO000 #line:269
-	return OOO0OO0000O00OOO0 ,OO0O00000000O0000
-#e9015584e6a44b14988f13e2298bcbf9
+def lineInSet(p0, p1, lines):
+    return lines.count((p0, p1)) or lines.count((p1,p0))
 
+def collidedWithNonParallel(p1, p2, lines):
+    coll = rayTraceWorldNoEndPoints(p1, p2, lines)
+    if coll:
+        coll = (math.ceil(coll[0]), math.ceil(coll[1]))
+    if coll == p1 or coll == p2:
+        return False
+    return coll
 
-#===============================================================#
-# Obfuscated by Oxyry Python Obfuscator (http://pyob.oxyry.com) #
-#===============================================================#
+def noPointsInPolygon(poly, w_points):
+    for point in w_points:
+        if pointInsidePolygonPoints(point, poly):
+            return False
+    return True
+
+def appendPolyNoDuplicates(poly, poly_list):
+    for permut in permutations(poly):
+        if poly_list.count(permut):
+            return
+    poly_list.append(poly)
+
+def removeLineDuplicates(line, line_list):
+    line_list.remove(line)
+    line_list.remove(reverseLine(line))
+
+origin = (0,0)
+refvec = [0,1]
+
+def clockwiseangle_and_distance(point):
+    # Vector between point and origin v = p - o
+    vector = [point[0]-origin[0], point[1]-origin[1]]
+    # Length of vector: ||v||
+    lenvector = math.hypot(vector[0], vector[1])
+    # If length is zero there is no angle
+    if lenvector == 0:
+        return -math.pi, 0
+    # Normalize vector: v/||v||
+    normalized = [vector[0]/lenvector, vector[1]/lenvector]
+    dotprod = normalized[0]*refvec[0] + normalized[1]*refvec[1]		# x1*x2 + y1*y2
+    diffprod = refvec[1]*normalized[0] - refvec[0]*normalized[1]	# x1*y2 - y1*x2
+    angle = math.atan2(diffprod, dotprod)
+    # Negative angles represent counter-clockwise angles so we need to subtract them
+    # from 2*pi (360 degrees)
+    if angle < 0:
+        return 2*math.pi+angle
+    # Return first angle as its primary sorting criteria, if two vectors have same angle
+    # shorter distance should come first
+    return angle
+
+# Used to recursively expand a polygon given the other polygons in the scene
+def expandPoly(poly, o_polys):
+    global origin
+    for obj in filter(lambda x, poly=poly: x != poly, o_polys):
+        if polygonsAdjacent(poly, obj):
+            shape = list(set(poly + obj))
+            origin = shape[-1]
+            shape = tuple(sorted(shape, key=clockwiseangle_and_distance))
+            if isConvex(shape):
+                o_polys.remove(poly)
+                o_polys.remove(obj)
+                appendPolyNoDuplicates(shape, o_polys)
+                return expandPoly(shape, o_polys)
+    return
+
+# Creates a pathnode network that connects the midpoints of each navmesh together
+def myCreatePathNetwork(world, agent = None):
+    nodes = set()
+    edges = []
+    polys = []
+    ### YOUR CODE GOES BELOW HERE ###
+    w_lines = world.getLines()
+    w_points = sorted(world.getPoints(), key=clockwiseangle_and_distance)
+
+    # For every point, try to make a triangle with every other point in scene
+    for a in w_points:
+        for b in filter(lambda x, a=a: x != a, w_points):
+            if not collidedWithNonParallel(a, b, w_lines):
+                for c in filter(lambda x, a=a, b=b: x != a and x != b, w_points):
+                    if not collidedWithNonParallel(b, c, w_lines) \
+                        and not collidedWithNonParallel(a, c, w_lines) \
+                        and noPointsInPolygon((a,b,c), \
+                        filter(lambda x, a=a, b=b, c=c: x != a and x != b and x != c, w_points)):
+                        # Valid triangle! Yay
+                        appendPolyNoDuplicates((a,b,c), polys)
+                        appendLineNoDuplicates((a,b), w_lines)
+                        appendLineNoDuplicates((a,c), w_lines)
+                        appendLineNoDuplicates((b,c), w_lines)
+
+    # Ensure triangles do not get made inside objects
+    for tri in list(polys):
+        for obj in world.getObstacles():
+            tmpobj = set(obj.getPoints())
+            if tmpobj.issuperset(list(tri)):
+                polys.remove(tri)
+
+    poly_len = 0
+    # Merge triangles into convex polys
+    while poly_len != len(polys):
+        poly_len = len(polys)
+        for tri in polys:
+            expandPoly(tri, polys)
+
+    x_axis = (1, 0)
+    edg_a = None
+    edg_b = None
+
+    # Create nodes and edges using center, mid-point of lines, and corners of polygon
+    for poly in polys:
+        w_lines = world.getLines()
+        l_lines = []
+        # Center
+        c_node = tuple([sum(x)/len(poly) for x in zip(*poly)])
+        l_nodes = set()
+        # Midpoint of lines
+        for i in xrange(-1, len(poly)-1):
+            if not lineInSet(poly[i], poly[i+1], w_lines):
+                node_a = ((3 * poly[i][0] + poly[i+1][0]) / 4, 
+                          (3 * poly[i][1] + poly[i+1][1]) / 4)
+                l_nodes.add(node_a)
+                node_b = ((poly[i][0] + 3 * poly[i+1][0]) / 4, 
+                          (poly[i][1] + 3 * poly[i+1][1]) / 4)
+                l_nodes.add(node_b)
+                node_c = ((poly[i][0] + poly[i+1][0]) / 2,
+                          (poly[i][1] + poly[i+1][1]) / 2)
+                l_nodes.add(node_c)
+                l_lines += list(permutations([node_a, node_b, node_c], 2))
+        
+        # Get edges
+        nodes.add(c_node)
+        for node in l_nodes:
+            if rayTraceAgentDependent(c_node, node, w_lines, agent):
+                appendLineNoDuplicates((c_node, node), edges)
+                nodes.add(node)
+
+        # Offshoots of corners
+        # for point in w_points:
+        #     node = ((point[0] + c_node[0]) / 2,
+        #            (point[1] + c_node[1]) / 2)
+        #     l_nodes.add(node)
+        p_lines = set(combinations(l_nodes, 2)).difference(l_lines)
+        for line in p_lines:
+            # if distance(line[0], line[1]) > max([distance(line[0], c_node), distance(line[1], c_node)]):
+            #     continue
+            dif_x = line[1][0] - line[0][0]
+            dif_y = line[1][1] - line[0][1]
+            # Get angle of line
+            ang = angle(x_axis, (dif_x, dif_y))
+            # Use angle of perpendicular to get offset for agent radius
+            x_delt = (agent.maxradius) * sin(ang)
+            y_delt = (agent.maxradius) * cos(ang)
+            if dif_y >= 0:
+                edg_a = ((line[0][0] + x_delt, line[0][1] - y_delt),
+                        (line[1][0] + x_delt, line[1][1] - y_delt))
+                edg_b = ((line[0][0] - x_delt, line[0][1] + y_delt),
+                        (line[1][0] - x_delt, line[1][1] + y_delt))
+            else:
+                edg_a = ((line[0][0] + x_delt, line[0][1] + y_delt),
+                        (line[1][0] + x_delt, line[1][1] + y_delt))
+                edg_b = ((line[0][0] - x_delt, line[0][1] - y_delt),
+                        (line[1][0] - x_delt, line[1][1] - y_delt))
+
+            # Now check rayTrace for created lines
+            # Check lines to see if agent size will cause collision during movement or at node
+            if rayTraceAgentDependent(line[0], line[1], w_lines, agent) \
+            and not rayTraceWorldNoEndPoints(line[0], line[1], edges):
+                appendLineNoDuplicates(line, edges)
+                nodes.add(line[0])
+                nodes.add(line[1])
+
+    ### YOUR CODE GOES ABOVE HERE ###
+    return nodes, edges, polys

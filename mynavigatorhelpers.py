@@ -26,6 +26,8 @@ from utils import *
 from core import *
 
 def rayTraceAgentDependent(p1, p2, worldLines, agent):
+    if p1 == p2:
+        return False
     line = (p1, p2)
     x_axis = (1, 0)
     edg_a = None
@@ -34,6 +36,7 @@ def rayTraceAgentDependent(p1, p2, worldLines, agent):
     dif_x = line[1][0] - line[0][0]
     dif_y = line[1][1] - line[0][1]
     # Get angle of line
+    # print (dif_x, dif_y)
     ang = angle(x_axis, (dif_x, dif_y))
     # Use angle of perpendicular to get offset for agent radius
     x_delt = (agent.maxradius) * sin(ang)
@@ -64,20 +67,20 @@ def rayTraceAgentDependent(p1, p2, worldLines, agent):
 def shortcutPath(source, dest, path, world, agent):
     ### YOUR CODE GOES BELOW HERE ###
     # TODO: Collapse where available
-    path.insert(0, source)
-    path.append(dest)
-    newPath = [path[0]]
-    end = len(path) - 1
-    i = 0
-    for _ in xrange(0, end):
-        i+=1
-        for j in xrange(end, i, -1):
-            if rayTraceAgentDependent(path[i], path[j], world.getLinesWithoutBorders(), agent):
-                newPath.append(path[j])
-                i = j - 1
-                break
+    # path.insert(0, source)
+    # path.append(dest)
+    # newPath = [path[0]]
+    # end = len(path) - 1
+    # i = 0
+    # for _ in xrange(0, end):
+    #     i+=1
+    #     for j in xrange(end, i, -1):
+    #         if rayTraceAgentDependent(path[i], path[j], world.getLinesWithoutBorders(), agent):
+    #             newPath.append(path[j])
+    #             i = j - 1
+    #             break
 
-    path = newPath
+    # path = newPath
     
     # knots = [
     #     0, 0, 0, 1, 2, 2, 2
@@ -148,15 +151,15 @@ def interpolation(t, points, degree = 1, knots = None, weights = None):
     return result
 
 
-# # Find the point in nodes closest to p that is unobstructed
-# # NOTE: This implementation fixes teh problem of clearance
-# def findClosestUnobstructed(p, nodes, worldLines, agent):
-# 	best = None
-# 	dist = INFINITY
-# 	for n in nodes:
-# 		if rayTraceAgentDependent(p, n, worldLines, agent):
-# 			d = distance(p, n)
-# 			if best == None or d < dist:
-# 				best = n
-# 				dist = d
-# 	return best
+# Find the point in nodes closest to p that is unobstructed
+# NOTE: This implementation fixes teh problem of clearance
+def findClosestUnobstructed_fix(p, nodes, worldLines, agent):
+	best = None
+	dist = INFINITY
+	for n in nodes:
+		if rayTraceAgentDependent(p, n, worldLines, agent):
+			d = distance(p, n)
+			if best == None or d < dist:
+				best = n
+				dist = d
+	return best

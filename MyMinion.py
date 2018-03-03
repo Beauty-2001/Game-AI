@@ -27,6 +27,7 @@ from moba import *
 
 # Counts number of defenders
 squads = {'defend': 0, 'backup': 0, 'attacking': 0}
+minion_cnt = 0
 
 class MyMinion(Minion):
 	
@@ -48,6 +49,9 @@ class MyMinion(Minion):
 		if squads['backup'] > 5 and self.squad == 'backup':
 			self.squad = 'attacking'
 		squads[self.squad] += 1
+		global minion_cnt
+		minion_cnt += 1
+		print minion_cnt
 		### YOUR CODE GOES ABOVE HERE ###
 
 	def start(self):
@@ -201,7 +205,7 @@ class Move(State):
 			# If outside of some radius, move toward it
 			my_base = world.getBaseForTeam(self.team)
 			base_radius = my_base.getMaxRadius()
-			agent.navigateTo(getPointInRadius(my_base.getLocation(), BASEBULLETRANGE*2, BASEBULLETRANGE, possibleDests))
+			agent.navigateTo(getPointInRadius(my_base.getLocation(), BASEBULLETRANGE, my_base.getMaxRadius(), possibleDests))
 			agent.changeState(Moving, True)
 
 
