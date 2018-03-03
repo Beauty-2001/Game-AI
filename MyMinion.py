@@ -83,22 +83,19 @@ class Idle(State):
 
 		# Then if you have a target and its in range, attack it or pursue if not in range
 		if agent.target:
+			dist = distance(agent.target.position, agent.position)
 			# If in shooting range, shoot at enemy
-			if distance(agent.target.position, agent.position) < BULLETRANGE:
+			if dist < BULLETRANGE:
 				agent.changeState(Attack)
 			# If not in range and a backup squad character, pursue enemy
-			elif agent.squad == 'backup':
+			elif agent.squad == 'backup' and dist < BULLETRANGE/2:
 				agent.changeState(Pursue)
 			# If any other type of character, forget your target
 			else:
 				agent.target = None
 		# If no targets are available, look for one or move
 		else:
-			self.target = getOptimalEnemy(agent)
-			if not self.target:
-				agent.changeState(Move, agent.squad, agent.getTeam())
-			else:
-				agent.changeState(Attack)
+			agent.changeState(Move, agent.squad, agent.getTeam())
 		### YOUR CODE GOES ABOVE HERE ###
 		return None
 
@@ -122,7 +119,15 @@ class Taunt(State):
 ### YOUR STATES GO HERE:
 
 def getOptimalEnemy(agent):
-	enemies = filter(lambda x, agent=agent: x.getTeam() != agent.getTeam() and distance(x.getLocation(), agent.getLocation()) < BULLETRANGE, agent.getVisibleType(MOBAAgent))
+	if agent.target and agent.target.alive and distance(agent.getLocation(), agent.target.getLocation()) < BULLETRANGE:
+		return agent.target
+	towers = filter(lambda x, agent=agent: x.getTeam() != agent.getTeam() and distance(x.getLocation(), agent.getLocation()) < BULLETRANGE, agent.getVisibleType(Tower))
+	if towers:
+		return min(towers, key=lambda x: x.getHitpoints())
+	bases = filter(lambda x, agent=agent: x.getTeam() != agent.getTeam() and distance(x.getLocation(), agent.getLocation()) < BULLETRANGE, agent.getVisibleType(Base))
+	if bases:
+		return min(bases, key=lambda x: x.getHitpoints())
+	enemies = filter(lambda x, agent=agent: x.getTeam() != agent.getTeam() and distance(x.getLocation(), agent.getLocation()) < BULLETRANGE, agent.getVisibleType(Minion))
 	if enemies:
 		return min(enemies, key=lambda x: x.getHitpoints())
 	return None
