@@ -60,7 +60,7 @@ class MyAlienMinion(MyMinion):
 ########################
 
 world = MOBAWorld(SEED, dims, dims, 2, 60)
-agent = Hero((SCREEN[0]/2, SCREEN[1]/2), 0, world)
+agent = Hero((SCREEN[0], SCREEN[1]), 0, world)
 agent.team = 0
 world.setPlayerAgent(agent)
 world.initializeTerrain(obstacles, (0, 0, 0), 4)
