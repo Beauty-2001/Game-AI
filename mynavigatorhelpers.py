@@ -148,15 +148,15 @@ def interpolation(t, points, degree = 1, knots = None, weights = None):
     return result
 
 
-# Find the point in nodes closest to p that is unobstructed
-# NOTE: This implementation fixes teh problem of clearance
-def findClosestUnobstructed(p, nodes, worldLines, agent):
-	best = None
-	dist = INFINITY
-	for n in nodes:
-		if rayTraceAgentDependent(p, n, worldLines, agent):
-			d = distance(p, n)
-			if best == None or d < dist:
-				best = n
-				dist = d
-	return best
+# # Find the point in nodes closest to p that is unobstructed
+# # NOTE: This implementation fixes teh problem of clearance
+# def findClosestUnobstructed(p, nodes, worldLines, agent):
+# 	best = None
+# 	dist = INFINITY
+# 	for n in nodes:
+# 		if rayTraceAgentDependent(p, n, worldLines, agent):
+# 			d = distance(p, n)
+# 			if best == None or d < dist:
+# 				best = n
+# 				dist = d
+# 	return best

@@ -28,11 +28,11 @@ from moba import *
 # Health variable used to provide friendlies information on their comrades' status
 ally_health = {"healthy": [], "moderate": [], "danger": []}
 
-# Allows for grouping of allies and coordinated attacks
-squads = []
-
 # Live friendly minion count
 alive = 0
+
+# Allows for grouping of allies and coordinated attacks
+squads = {'defend': [], 'backup': [], 'attacking': []}
 
 class MyMinion(Minion):
 	
@@ -44,12 +44,14 @@ class MyMinion(Minion):
 		self.target = None
 		# If the state has finished
 		self.state_finished = True
-		self.states = [Idle, Attack, Move, Retreat, Pursue, Flank, Support, Defend, Dodge]
+		self.states = [Idle, Attack, Move, Pursue, Flank, Support, Defend, Dodge]
+		self.squad = None
+		self.moving = False
 		### YOUR CODE GOES ABOVE HERE ###
 
 	def start(self):
 		Minion.start(self)
-		self.changeState(Idle)
+		self.changeState(Move, self.squad, self.getTeam())
 
 ############################
 ### Idle
@@ -67,31 +69,32 @@ class Idle(State):
 		State.execute(self, delta)
 		### YOUR CODE GOES BELOW HERE ###
 		# First check if bullets are directed at you and dodge if so
-		team = self.agent.getTeam()
+		agent = self.agent
+		team = agent.getTeam()
 		# TODO: Test this gets only bullets pointing at the agent
 		bullets = [bullet.getTeam() != team and\
 				   numpy.isclose(bullet.getOrientation(), \
-				   angle(self.agent.getPosition(), bullet.getPosition))\
-				   for bullet in self.agent.getVisibleType(MOBABullet)]
+				   angle(agent.getPosition(), bullet.getPosition))\
+				   for bullet in agent.getVisibleType(MOBABullet)]
 		enemies = [enemy.getTeam() != team and \
 				   type(enemy) != MOBABullet for enemy \
-				   in self.agent.getVisible()]
+				   in agent.getVisible()]
 		if bullets:
-			self.agent.changeState(Dodge, bullets)
+			agent.changeState(Dodge, bullets)
 		# Then if you have a target and its in range, attack it or pursue if not in range
-		elif self.agent.target:
-			if distance(self.agent.target.position, self.agent.position) <= BULLETRANGE:
-				self.agent.changeState(Attack, self.agent.target)
+		elif agent.target:
+			if distance(agent.target.position, agent.position) <= BULLETRANGE:
+				agent.changeState(Attack, agent.target)
 			else:
-				self.agent.changeState(Pursue, self.agent.target)
+				agent.changeState(Pursue, agent.target)
 		# TODO: If you dont have a target, find an in-range enemy and attack closest
-		elif not self.agent.target and enemies:
-			self.agent.changeState(LockOn, enemies)
-		# TODO: If no targets are available, check what your role is
+		elif not agent.target and enemies:
+			agent.changeState(LockOn, enemies)
+		# TODO: If no targets are available, MOVE!!!
 		elif not enemies:
-			# TODO: If you are offense, support low health allies or continue toward base
-			# TODO: If you are part of the backup, support medium health attackers or flank
-			# TODO: If you are defense, stay at the base and wait
+			if not agent.moving:
+				agent.changeState(Move, agent.squad, agent.getTeam())
+				agent.moving = True
 		### YOUR CODE GOES ABOVE HERE ###
 		return None
 
@@ -125,6 +128,10 @@ class Attack(State):
 		pass
 	
 	def execute(self, delta = 0):
+		# TODO: Shoot at the target passed in
+		if self.agent.canfire:
+			self.agent.turnToFace(self.agent.target.getLocation())
+			self.agent.shoot()
 		pass
 
 ##############################
@@ -136,23 +143,40 @@ class Attack(State):
 
 class Move(State):
 	def parseArgs(self, args):
-		pass
+		self.squad = args[0]
+		self.team = args[1]
+		# self.interruptable = args[2]
+		self.time = 0
 	
 	def execute(self, delta = 0):
-		pass
-
-##############################
-### Retreat
-###
-### Runs away from combat to a safer location
-### 
-
-class Retreat(State):
-	def parseArgs(self, args):
-		pass
-	
-	def execute(self, delta = 0):
-		pass
+		State.execute(self, delta)
+		# Look for enemies in attack range while moving
+		if self.agent.isMoving():
+			self.time += delta
+			if self.time > 500:
+				# Look for lowest hitpoint enemy, attack it first
+				enemies = filter(lambda x, self=self: x.getTeam() != self.agent.getTeam() and distance(x.getLocation(), self.agent.getLocation()) <= BULLETRANGE, self.agent.getVisibleType(MOBAAgent))
+				if enemies:
+					self.agent.target = min(enemies, key=lambda x: x.getHitpoints())
+					self.agent.changeState(Attack)
+			return
+		world = self.agent.world
+		enemy_bases = world.getEnemyBases(self.team)
+		my_base = world.getBaseForTeam(self.team)
+		if distance(enemy_bases[0].getLocation(), self.agent.getLocation()) > BULLETRANGE:
+			self.agent.navigateTo(enemy_bases[0].getLocation())
+		# self.agent.changeState(Idle)
+		# TODO: If you are offense, support low health allies or continue toward base
+		# if self.squad == 'attacking':
+		# 	pass
+		# # TODO: If you are part of the backup, support medium health attackers or flank
+		# elif self.squad == 'backup':
+		# 	pass
+		# # TODO: If you are defense, stay at the base and wait
+		# elif self.squad == 'defense':
+			# TODO: Get location of your base
+			# If outside three times the length of the base's radius, move toward base
+			# TODO: If outside of some radius, move toward it
 
 ##############################
 ### Pursue
@@ -162,9 +186,10 @@ class Retreat(State):
 
 class Pursue(State):
 	def parseArgs(self, args):
-		pass
+		self.target = args[0]
 	
 	def execute(self, delta = 0):
+		# TODO: Follow until enemy gets outside of "delta" of its goal (based on squad)
 		pass
 
 ##############################
@@ -214,9 +239,10 @@ class Defend(State):
 
 class Dodge(State):
 	def parseArgs(self, args):
-		pass
+		self.bullets = args[0]
 	
 	def execute(self, delta = 0):
+		# TODO: Move in a direction perpendicular to bullet directions
 		pass
 
 ##############################
@@ -227,7 +253,9 @@ class Dodge(State):
 
 class LockOn(State):
 	def parseArgs(self, args):
-		pass
+		self.enemies = args[0]
 	
 	def execute(self, delta = 0):
+		# TODO: Find closest and weakest enemy
+		# TODO: Alternatively attack Tower
 		pass

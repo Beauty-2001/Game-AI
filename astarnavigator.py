@@ -1,321 +1,170 @@
-'''
- * Copyright (c) 2014, 2015 Entertainment Intelligence Lab, Georgia Institute of Technology.
- * Originally developed by Mark Riedl.
- * Last edited by Mark Riedl 05/2015
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
-'''
+import sys, pygame, math, numpy, random, time, copy
+from pygame.locals import *
 
-import heapq
-from math import cos, sin
-
-import numpy as np
-import pygame
-
+from constants import *
+from utils import *
 from core import *
-from mycreatepathnetwork import myCreatePathNetwork
+from mycreatepathnetwork import *
 from mynavigatorhelpers import *
-from utils import distance
-
-
-###############################
-### Priority Queue
-###
-### Uses the heapq library to create a priority queue
-class PriorityQueue(object):
-    """
-    A queue structure where each element is served in order of priority.
-
-    Elements in the queue are popped based on the priority with higher priority
-    elements being served before lower priority elements.  If two elements have
-    the same priority, they will be served in the order they were added to the
-    queue.
-
-    Attributes:
-        queue (list): Nodes added to the priority queue.
-        current (int): The index of the current node in the queue.
-    """
-
-    def __init__(self):
-        """Initialize a new Priority Queue."""
-        self.queue = []
-        self.nodes = {}
-        self.unique_id = 0
-
-    def pop(self):
-        """
-        Pop top priority node from queue.
-
-        Returns:
-            The node with the highest priority.
-        """
-
-        while self.queue:
-            priority, unique_id, node_id = heapq.heappop(self.queue)
-            if node_id is not None:
-                del self.nodes[unique_id]
-                return (priority, node_id)
-        raise BaseException('The queue is empty')
-
-    def remove(self, node_id):
-        """
-        Remove a node from the queue.
-
-        This is a hint, you might require this in ucs,
-        however, if you choose not to use it, you are free to
-        define your own method and not use it.
-
-        Args:
-            node_id (int): Index of node in queue.
-        """
-        # Retrieve node object from nodes list
-        node = self.nodes.pop(node_id)
-        # Update node id to reflect None (or Removed)
-        node[-1] = None
-
-
-    def __iter__(self):
-        """Queue iterator."""
-
-        return iter(sorted(self.queue))
-
-    def __str__(self):
-        """Priority Queue to string."""
-
-        return 'PQ:%s' % self.queue
-
-    def append(self, node):
-        """
-        Append a node to the queue.
-
-        Args:
-            node: Comparable Object to be added to the priority queue.
-        """
-
-        # Increment the unique id counter
-        self.unique_id += 1
-        # create node entry with layout of priority, unique id, node id
-        node_entry = [node[0], self.unique_id, node[-1]]
-        # add node entry to the list of nodes, indexed by its node id
-        self.nodes[self.unique_id] = node_entry
-        # finally push node_entry onto heap
-        heapq.heappush(self.queue, node_entry)
-
-    def __contains__(self, key):
-        """
-        Containment Check operator for 'in'
-        """
-
-        return key in [n for _, n in self.queue]
-
-    def __eq__(self, other):
-        """
-        Compare this Priority Queue with another Priority Queue.
-        """
-
-        return self == other
-
-    def size(self):
-        """
-        Get the current size of the queue.
-        """
-
-        return len(self.queue)
-
-    def clear(self):
-        """Reset queue to empty (no nodes)."""
-        self.queue = []
-
-    def top(self):
-        """
-        Get the top item in the queue.
-        """
-
-        return self.queue[0]
-
 
 
 ###############################
 ### AStarNavigator
 ###
-### Creates a path node network and implements the A* algorithm to create a path to the given destination.
-            
+### Creates a path node network and implements the FloydWarshall all-pairs shortest-path algorithm to create a path to the given destination.
+
 class AStarNavigator(NavMeshNavigator):
 
-    def __init__(self):
-        NavMeshNavigator.__init__(self)
-        
+	def __init__(self):
+		NavMeshNavigator.__init__(self)
 
-    ### Create the path node network.
-    ### self: the navigator object
-    ### world: the world object
-    def createPathNetwork(self, world):
-        self.pathnodes, self.pathnetwork, self.navmesh = myCreatePathNetwork(world, self.agent)
-        return None
-        
-    ### Finds the shortest path from the source to the destination using A*.
-    ### self: the navigator object
-    ### source: the place the agent is starting from (i.e., its current location)
-    ### dest: the place the agent is told to go to
-    def computePath(self, source, dest):
-        global current
-        current = 0
-        self.setPath(None)
-        ### Make sure the next and dist matrices exist
-        if self.agent != None and self.world != None: 
-            self.source = source
-            self.destination = dest
-            ### Step 1: If the agent has a clear path from the source to dest, then go straight there.
-            ###   Determine if there are no obstacles between source and destination (hint: cast rays against world.getLines(), check for clearance).
-            ###   Tell the agent to move to dest
-            ### Step 2: If there is an obstacle, create the path that will move around the obstacles.
-            ###   Find the path nodes closest to source and destination.
-            ###   Create the path by traversing the self.next matrix until the path node closest to the destination is reached
-            ###   Store the path by calling self.setPath()
-            ###   Tell the agent to move to the first node in the path (and pop the first node off the path)
-            if clearShot(source, dest, self.world.getLines(), self.world.getPoints(), self.agent):
-                self.agent.moveToTarget(dest)
-            else:
-                start = findClosestUnobstructed(source, self.pathnodes, self.world.getLinesWithoutBorders(), self.agent)
-                end = findClosestUnobstructed(dest, self.pathnodes, self.world.getLinesWithoutBorders(), self.agent)
-                if start != None and end != None:
-                    # print len(self.pathnetwork)
-                    newnetwork = unobstructedNetwork(self.pathnetwork, self.world.getGates())
-                    # print len(newnetwork)
-                    closedlist = []
-                    path, closedlist = astar(start, end, newnetwork)
-                    if path is not None and len(path) > 0:
-                        path = shortcutPath(source, dest, path, self.world, self.agent)
-                        self.setPath(path)
-                        if self.path is not None and len(self.path) > 0:
-                            first = self.path.pop(0)
-                            self.agent.moveToTarget(first)
-                    else:
-                        # Otherwise wander
-                        wander_radius = 100
-                        dest = (np.random.randint(start[0]-wander_radius, start[0]+wander_radius), 
-                                np.random.randint(start[1]-wander_radius, start[1]+wander_radius))
-                        while insideObstacle(dest, self.world.getObstacles()):
-                            dest = (np.random.randint(start[0]-wander_radius, start[0]+wander_radius), 
-                                    np.random.randint(start[1]-wander_radius, start[1]+wander_radius))
-                        self.agent.moveToTarget(dest)
 
-        return None
-        
-    ### Called when the agent gets to a node in the path.
-    ### self: the navigator object
-    def checkpoint(self):
-        myCheckpoint(self)
-        return None
+	### Create the pathnode network and pre-compute all shortest paths along the network.
+	### self: the navigator object
+	### world: the world object
+	def createPathNetwork(self, world):
+		self.pathnodes, self.pathnetwork, self.navmesh = myCreatePathNetwork(world, self.agent)
+		return None
 
-    ### This function gets called by the agent to figure out if some shortcuts can be taken when traversing the path.
-    ### This function should update the path and return True if the path was updated.
-    def smooth(self):
-        return mySmooth(self)
+	### Finds the shortest path from the source to the destination using A*.
+	### self: the navigator object
+	### source: the place the agent is starting from (i.e., it's current location)
+	### dest: the place the agent is told to go to
+	def computePath(self, source, dest):
+		### Make sure the next and dist matricies exist
+		if self.agent != None and self.world != None:
+			self.source = source
+			self.destination = dest
+			### Step 1: If the agent has a clear path from the source to dest, then go straight there.
+			###   Determine if there are no obstacles between source and destination (hint: cast rays against world.getLines(), check for clearance).
+			###   Tell the agent to move to dest
+			### Step 2: If there is an obstacle, create the path that will move around the obstacles.
+			###   Find the pathnodes closest to source and destination.
+			###   Create the path by traversing the self.next matrix until the pathnode closes to the destination is reached
+			###   Store the path by calling self.setPath()
+			###   Tell the agent to move to the first node in the path (and pop the first node off the path)
+			if clearShot(source, dest, self.world.getLinesWithoutBorders(), self.world.getPoints(), self.agent):
+				self.agent.moveToTarget(dest)
+			else:
+				start = findClosestUnobstructed(source, self.pathnodes, self.world.getLinesWithoutBorders())
+				end = findClosestUnobstructed(dest, self.pathnodes, self.world.getLinesWithoutBorders())
+				if start != None and end != None:
+					#print len(self.pathnetwork)
+					newnetwork = unobstructedNetwork(self.pathnetwork, self.world.getGates())
+					#print len(newnetwork)
+					#print "ok"
+					closedlist = []
+					path, closedlist = astar(start, end, newnetwork)
+					if path is not None and len(path) > 0:
+						path = shortcutPath(source, dest, path, self.world, self.agent)
+						self.setPath(path)
+						if self.path is not None and len(self.path) > 0:
+							first = self.path.pop(0)
+							self.agent.moveToTarget(first)
+		return None
 
-    def update(self, delta):
-        myUpdate(self, delta)
+	### Called when the agent gets to a node in the path.
+	### self: the navigator object
+	def checkpoint(self):
+		myCheckpoint(self)
+		return None
+
+	### This function gets called by the agent to figure out if some shortcutes can be taken when traversing the path.
+	### This function should update the path and return True if the path was updated.
+	def smooth(self):
+		return mySmooth(self)
+
+	def update(self, delta):
+		myUpdate(self, delta)
 
 
 def unobstructedNetwork(network, worldLines):
-    newnetwork = []
-    for l in network:
-        hit = rayTraceWorld(l[0], l[1], worldLines)
-        if hit == None:
-            newnetwork.append(l)
-    return newnetwork
-
-# Obtains the child nodes of a given node
-def get_children(parent, network):
-    children = []
-    for line in network:
-        if line[0] == parent:
-            children.append(line[1])
-        elif line[1] == parent:
-            children.append(line[0])
-    return children
-
-def astar(init, goal, network):
-    path = []
-    closed = [] # Another name for explored
-    ### YOUR CODE GOES BELOW HERE ###
-    frontier = PriorityQueue()
-    node_data = {}
-    # Initialize frontier and node_data map with start state
-    frontier.append((0, init))
-    node_data[init] = (None, 0)
-    while frontier.size():
-        exploring = frontier.pop()
-        if exploring[-1] == goal:
-            state = exploring[-1]
-            parent = node_data[state][0]
-            while parent:
-                path.append(state)
-                state = parent
-                parent = node_data[state][0]
-            path.append(state)
-            list.reverse(path)
-            return path, closed
-        elif exploring[-1] in closed:
-            continue
-        else:
-            parent = exploring[-1]
-            children = get_children(parent, network)
-            closed.append(exploring[1])
-            parent_cost = node_data[parent][1]
-            for state in children:
-                g = distance(parent, state) + parent_cost
-                h = distance(state, goal)
-                cost = g + h
-                if state not in node_data or node_data[state][1] > g:
-                    node_data[state] = (parent, g)
-                if state not in closed:
-                    frontier.append((cost, state))
-
-    ### YOUR CODE GOES ABOVE HERE ###
-    return path, closed
-
-t = 0
-def myUpdate(nav, delta):
-    ### YOUR CODE GOES BELOW HERE ###
-    global t
-    t += delta
-    if t > 500:
-        myCheckpoint(nav)
-    ### YOUR CODE GOES ABOVE HERE ###
-    return None
-
-def myCheckpoint(nav):
-    ### YOUR CODE GOES BELOW HERE ###
-    global t
-    t = 0
-    agent_loc = nav.agent.position
-    gates = nav.world.getGates()
-    if rayTraceWorld(agent_loc, nav.agent.moveTarget, gates):
-        nav.computePath(agent_loc, nav.destination)
-    elif nav.path and len(nav.path) > 2:
-        if rayTraceWorld(nav.path[0], nav.path[1], gates):
-            nav.computePath(agent_loc, nav.destination)
-    ### YOUR CODE GOES ABOVE HERE ###
-    return None
+	newnetwork = []
+	for l in network:
+		hit = rayTraceWorld(l[0], l[1], worldLines)
+		if hit == None:
+			newnetwork.append(l)
+	return newnetwork
 
 
-### Returns true if the agent can get from p1 to p2 directly without running into an obstacle.
-### p1: the current location of the agent
-### p2: the destination of the agent
-### worldLines: all the lines in the world
-### agent: the Agent object
-def clearShot(p1, p2, worldLines, worldPoints, agent):
-    ### YOUR CODE GOES BELOW HERE ###
-    return rayTraceAgentDependent(p1, p2, worldLines, agent)
-    ### YOUR CODE GOES ABOVE HERE ###
+def foom (OO0OOO000OO0O000O ,O0O000OOOOOOO0O0O ,func =lambda O0OO0OOO00000OO0O :O0OO0OOO00000OO0O ):#line:1
+	for OO00O0OOO0O0O0OO0 in xrange (len (O0O000OOOOOOO0O0O )):#line:2
+		if func (OO0OOO000OO0O000O )<func (O0O000OOOOOOO0O0O [OO00O0OOO0O0O0OO0 ]):#line:3
+			O0O000OOOOOOO0O0O .insert (OO00O0OOO0O0O0OO0 ,OO0OOO000OO0O000O )#line:4
+			return O0O000OOOOOOO0O0O #line:5
+	O0O000OOOOOOO0O0O .append (OO0OOO000OO0O000O )#line:6
+	return O0O000OOOOOOO0O0O #line:7
+def astar (O0O00O000OO0O0OO0 ,O0OO0OOOOOO0OO0OO ,O00000O0OOO0OOOO0 ):#line:10
+	O0OOO0OOOOO0O00OO =[]#line:11
+	O0000OO00O0OOO0OO =[]#line:12
+	OOO0O0O0OO0OOO00O =[]#line:13
+	O0O00O000OO0O0OO0 =(O0O00O000OO0O0OO0 ,0 ,distance (O0O00O000OO0O0OO0 ,O0OO0OOOOOO0OO0OO ),None )#line:16
+	OOO0O0O0OO0OOO00O =set ()#line:17
+	OO00O0000OO000O00 =set ()#line:18
+	O0000OO00O0OOO0OO =[O0O00O000OO0O0OO0 ]#line:19
+	O00OO0OOOO00000OO =O0O00O000OO0O0OO0 #line:20
+	while O00OO0OOOO00000OO is not None and O00OO0OOOO00000OO [0 ]!=O0OO0OOOOOO0OO0OO and len (O0000OO00O0OOO0OO )>0 :#line:23
+		OOO0O0O0OO0OOO00O .add (O00OO0OOOO00000OO [0 ])#line:24
+		OO00O0000OO000O00 .add (O00OO0OOOO00000OO )#line:25
+		O0000OO00O0OOO0OO .pop (0 )#line:26
+		O0O00O0000OOO0OOO =fooz (O00OO0OOOO00000OO ,O00000O0OOO0OOOO0 ,O0OO0OOOOOO0OO0OO )#line:28
+		for OO000O00O0000O0OO in O0O00O0000OOO0OOO :#line:30
+			if OO000O00O0000O0OO [0 ]not in OOO0O0O0OO0OOO00O :#line:31
+				foom (OO000O00O0000O0OO ,O0000OO00O0OOO0OO ,lambda O0OO0O0O000OO00O0 :O0OO0O0O000OO00O0 [1 ]+O0OO0O0O000OO00O0 [2 ])#line:32
+		if len (O0000OO00O0OOO0OO )>0 :#line:34
+			O00OO0OOOO00000OO =O0000OO00O0OOO0OO [0 ]#line:35
+		else :#line:36
+			O00OO0OOOO00000OO =None #line:37
+	if O00OO0OOOO00000OO is not None :#line:40
+		while O00OO0OOOO00000OO [3 ]is not None :#line:41
+			O0OOO0OOOOO0O00OO .append (O00OO0OOOO00000OO [0 ])#line:42
+			O00O0O000O000OOO0 =O00OO0OOOO00000OO [3 ]#line:43
+			for OO00O0O000O000O0O in list (OO00O0000OO000O00 ):#line:44
+				if O00O0O000O000OOO0 ==OO00O0O000O000O0O [0 ]:#line:45
+					O00OO0OOOO00000OO =OO00O0O000O000O0O #line:46
+					break #line:47
+		O0OOO0OOOOO0O00OO .append (O00OO0OOOO00000OO [0 ])#line:48
+		O0OOO0OOOOO0O00OO .reverse ()#line:49
+	OOO0O0O0OO0OOO00O =list (OOO0O0O0OO0OOO00O )#line:50
+	return O0OOO0OOOOO0O00OO ,OOO0O0O0OO0OOO00O #line:52
+def fooz (OO0OOOOOOO00O0O0O ,OOOOOO0OOOOOOO000 ,OO00O0O000O0OOO0O ):#line:55
+	OO0OOOO0O0O0OOOOO =[]#line:56
+	for OO0O00O0OO00OOO00 in OOOOOO0OOOOOOO000 :#line:57
+		if OO0O00O0OO00OOO00 [0 ]==OO0OOOOOOO00O0O0O [0 ]:#line:58
+			OO0OOOO0O0O0OOOOO .append ((OO0O00O0OO00OOO00 [1 ],OO0OOOOOOO00O0O0O [1 ]+distance (OO0O00O0OO00OOO00 [0 ],OO0O00O0OO00OOO00 [1 ]),distance (OO0O00O0OO00OOO00 [1 ],OO00O0O000O0OOO0O ),OO0OOOOOOO00O0O0O [0 ]))#line:59
+		elif OO0O00O0OO00OOO00 [1 ]==OO0OOOOOOO00O0O0O [0 ]:#line:60
+			OO0OOOO0O0O0OOOOO .append ((OO0O00O0OO00OOO00 [0 ],OO0OOOOOOO00O0O0O [1 ]+distance (OO0O00O0OO00OOO00 [0 ],OO0O00O0OO00OOO00 [1 ]),distance (OO0O00O0OO00OOO00 [0 ],OO00O0O000O0OOO0O ),OO0OOOOOOO00O0O0O [0 ]))#line:61
+	return OO0OOOO0O0O0OOOOO #line:62
+def myUpdate (OO0OOO00O0OO00O00 ,O0OOO0000OOOO00OO ):#line:66
+	if OO0OOO00O0OO00O00 .getPath ()is not None :#line:68
+		OOOO000O0OOO00000 =OO0OOO00O0OO00O00 .world .getGates ()#line:69
+		OO0O000O000O0000O =OO0OOO00O0OO00O00 .agent .getLocation ()#line:79
+		for OO0O00OOO0000OOOO in OO0OOO00O0OO00O00 .getPath ()+[OO0OOO00O0OO00O00 .getDestination ()]:#line:80
+			if OO0O000O000O0000O is not None :#line:81
+				O00O0OO0O000000O0 =rayTraceWorld (OO0O000O000O0000O ,OO0O00OOO0000OOOO ,OOOO000O0OOO00000 )#line:82
+				if O00O0OO0O000000O0 is not None :#line:83
+					OO0OOO00O0OO00O00 .setPath (None )#line:85
+					OO0OOO00O0OO00O00 .agent .stopMoving ()#line:86
+					return None #line:87
+			OO0O000O000O0000O =OO0O00OOO0000OOOO
+		return None #line:108
+def myCheckpoint (O0OOOOOOO0OOOO000 ):#line:113
+	""#line:128
+	return None #line:130
+def clearShot (OO0O0OO0000O00OOO ,O00O00O0OOO0OO00O ,O00O0O0OOO0OO0OOO ,O0OO00OO0O0OOO000 ,OOO00OOOOOO00OOOO ):#line:139
+	O0O00OO000O0O00OO =OOO00OOOOOO00OOOO .getRadius ()*4.0 #line:141
+	OOOO00OOO0O00OO00 =rayTraceWorld (OO0O0OO0000O00OOO ,O00O00O0OOO0OO00O ,O00O0O0OOO0OO0OOO )#line:142
+	if OOOO00OOO0O00OO00 ==None :#line:143
+		O00O0000O00OO0000 =False #line:144
+		for OOOO00000O0O0OO0O in O0OO00OO0O0OOO000 :#line:145
+			if minimumDistance ((OO0O0OO0000O00OOO ,O00O00O0OOO0OO00O ),OOOO00000O0O0OO0O )<O0O00OO000O0O00OO :#line:146
+				O00O0000O00OO0000 =True #line:147
+		if not O00O0000O00OO0000 :#line:148
+			return True #line:149
+	return False
+#e9015584e6a44b14988f13e2298bcbf9
+
+
+#===============================================================#
+# Obfuscated by Oxyry Python Obfuscator (http://pyob.oxyry.com) #
+#===============================================================#
