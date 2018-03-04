@@ -17,7 +17,7 @@
 '''
 
 import sys, pygame, random, time, copy
-from pygame.locals import * 
+from pygame.locals import *
 
 import numpy as np
 from math import sin, cos
@@ -67,6 +67,19 @@ def rayTraceAgentDependent(p1, p2, worldLines, agent):
 def shortcutPath(source, dest, path, world, agent):
     ### YOUR CODE GOES BELOW HERE ###
     # TODO: Collapse where available
+    w_lines = world.getLinesWithoutBorders()
+    path.insert(0,source)
+    path.append(dest)
+    newpath = []
+    point = source
+    while point != dest:
+        if not point:
+            return path
+        idx = path.index(point)
+        newpath.append(findFurthestUnobstructedOnPath(point, path[idx:], w_lines, agent))
+        point = newpath[-1]
+
+    path = newpath
     # path.insert(0, source)
     # path.append(dest)
     # newPath = [path[0]]
@@ -81,7 +94,7 @@ def shortcutPath(source, dest, path, world, agent):
     #             break
 
     # path = newPath
-    
+
     # knots = [
     #     0, 0, 0, 1, 2, 2, 2
     # ]
@@ -135,7 +148,7 @@ def interpolation(t, points, degree = 1, knots = None, weights = None):
         for j in xrange(0, dim):
             v[i].append(points[i][j] * weights[i])
         v[i].append(weights[i])
-    
+
     # level goes form 1 to curve degree
     for l in xrange(1, degree + 2):
         for i in xrange(s, s-degree-1+l, -1):
@@ -152,14 +165,25 @@ def interpolation(t, points, degree = 1, knots = None, weights = None):
 
 
 # Find the point in nodes closest to p that is unobstructed
-# NOTE: This implementation fixes teh problem of clearance
+# NOTE: This implementation fixes the problem of clearance
 def findClosestUnobstructed_fix(p, nodes, worldLines, agent):
-	best = None
-	dist = INFINITY
-	for n in nodes:
-		if rayTraceAgentDependent(p, n, worldLines, agent):
-			d = distance(p, n)
-			if best == None or d < dist:
-				best = n
-				dist = d
-	return best
+    best = None
+    dist = INFINITY
+    for n in nodes:
+        if rayTraceAgentDependent(p, n, worldLines, agent):
+            d = distance(p, n)
+            if best == None or d < dist:
+                best = n
+                dist = d
+    return best
+
+def findFurthestUnobstructedOnPath(p, path, worldLines, agent):
+    best = None
+    dist = -INFINITY
+    for n in path:
+        if rayTraceAgentDependent(p, n, worldLines, agent):
+            d = distance(p, n)
+            if best == None or d > dist:
+                best = n
+                dist = d
+    return best

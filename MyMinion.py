@@ -27,7 +27,7 @@ from moba import *
 
 # Counts number of defenders
 squads = {'defend': 0, 'backup': 0, 'attacking': 0}
-minion_cnt = 0
+# minion_cnt = 0
 
 class MyMinion(Minion):
 	
@@ -38,10 +38,9 @@ class MyMinion(Minion):
 		### YOUR CODE GOES BELOW HERE ###
 		self.target = None
 		# If the state has finished
-		self.state_finished = True
-		self.states = [Idle, Attack, Move, Moving, Pursue, Flank, Support, Dodge]
+		self.states = [Idle, Attack, Move, Moving, Pursue, Patrol]
 		
-		# self.squad = 'attacking'
+		# self.squad = 'backup'
 
 		self.squad = np.random.choice(squads.keys(), 1, p=[0.1,0.3,0.6])[0]
 		if squads['defend'] > 5 and self.squad == 'defend':
@@ -49,9 +48,9 @@ class MyMinion(Minion):
 		if squads['backup'] > 5 and self.squad == 'backup':
 			self.squad = 'attacking'
 		squads[self.squad] += 1
-		global minion_cnt
-		minion_cnt += 1
-		print minion_cnt
+		# global minion_cnt
+		# minion_cnt += 1
+		# print minion_cnt
 		### YOUR CODE GOES ABOVE HERE ###
 
 	def start(self):
@@ -78,12 +77,7 @@ class Idle(State):
 	def execute(self, delta = 0):
 		State.execute(self, delta)
 		### YOUR CODE GOES BELOW HERE ###
-		# First check if bullets are directed at you and dodge if so
 		agent = self.agent
-
-		# Look for a target
-		if not agent.target:
-			agent.target = getOptimalEnemy(agent)
 
 		# Then if you have a target and its in range, attack it or pursue if not in range
 		if agent.target:
@@ -92,7 +86,7 @@ class Idle(State):
 			if dist < BULLETRANGE:
 				agent.changeState(Attack)
 			# If not in range and a backup squad character, pursue enemy
-			elif agent.squad == 'backup' and dist < BULLETRANGE/2:
+			elif agent.squad == 'backup' and dist > BULLETRANGE/2:
 				agent.changeState(Pursue)
 			# If any other type of character, forget your target
 			else:
@@ -115,6 +109,7 @@ class Taunt(State):
 		self.victim = args[0]
 
 	def execute(self, delta = 0):
+		State.execute(self, delta)
 		if self.victim is not None:
 			print "Hey " + str(self.victim) + ", I don't like you!"
 		self.agent.changeState(Idle)
@@ -153,6 +148,7 @@ class Attack(State):
 		pass
 	
 	def execute(self, delta = 0):
+		State.execute(self, delta)
 		# Shoot at the target
 		agent = self.agent
 		if not agent.target or not agent.target.alive:
@@ -163,7 +159,10 @@ class Attack(State):
 		if agent.canfire:
 			agent.turnToFace(agent.target.getLocation())
 			agent.shoot()
-		agent.changeState(Idle)		
+		if agent.squad == 'defend':
+			agent.changeState(Patrol)
+		else:
+			agent.changeState(Idle)		
 
 ##############################
 ### Move
@@ -198,14 +197,14 @@ class Move(State):
 			enemy_bases = world.getEnemyBases(self.team)
 			base = np.random.choice(enemy_bases, 1)[0]
 
-			agent.navigateTo(getPointInRadius(base.getLocation(), BASEBULLETRANGE*2, BASEBULLETRANGE, possibleDests))
+			agent.navigateTo(getPointInRadius(base.getLocation(), BASEBULLETRANGE, base.getMaxRadius(), possibleDests))
 			agent.changeState(Moving, True)
 		# If you are defense, stay at the base and wait
 		elif self.squad == 'defend':
 			# If outside of some radius, move toward it
-			my_base = world.getBaseForTeam(self.team)
-			base_radius = my_base.getMaxRadius()
-			agent.navigateTo(getPointInRadius(my_base.getLocation(), BASEBULLETRANGE, my_base.getMaxRadius(), possibleDests))
+			my_base_structs = [world.getBaseForTeam(self.team)] + world.getTowersForTeam(self.team)
+			defending = np.random.choice(my_base_structs, 1)[0]
+			agent.navigateTo(getPointInRadius(defending.getLocation(), BULLETRANGE, defending.getMaxRadius(), possibleDests))
 			agent.changeState(Moving, True)
 
 
@@ -242,6 +241,8 @@ class Moving(State):
 					agent.turnToFace(enemy.getLocation())
 					agent.shoot()
 				return
+			elif agent.squad == 'defend':
+				agent.changeState(Patrol)
 			else:
 				agent.changeState(Idle)
 
@@ -257,47 +258,37 @@ class Pursue(State):
 		pass
 
 	def execute(self, delta = 0):
+		State.execute(self, delta)
 		agent = self.agent
-		agent.navigateTo(agent.target.getLocation())
-		agent.changeState(Moving, False)
+		if agent.target.alive:
+			agent.navigateTo(agent.target.getLocation())
+			agent.changeState(Moving, False)
+		else:
+			agent.target = None
+			agent.changeState(Idle)
 		pass
+
 
 ##############################
-### Flank
+### Patrol
 ###
-### Find path with least amount of enemies
-### 
+### Follows the target enemy agent within attacking distance
+###
 
-class Flank(State):
+class Patrol(State):
 	def parseArgs(self, args):
+		self.look_timer = 0
+		self.move_frequency = np.random.randint(3000, 5000)
+		self.move_timer = 0
 		pass
-	
+
 	def execute(self, delta = 0):
-		pass
-
-##############################
-### Support
-###
-### Group up with a struggling ally and attack its target
-###
-
-class Support(State):
-	def parseArgs(self, args):
-		pass
-	
-	def execute(self, delta = 0):
-		pass
-
-##############################
-### Dodge
-###
-### While attacking, if a bullet is far enough away
-### to be dodged then move out of its way.
-
-class Dodge(State):
-	def parseArgs(self, args):
-		self.bullets = args[0]
-	
-	def execute(self, delta = 0):
-		# TODO: Move in a direction perpendicular to bullet directions
-		pass
+		State.execute(self, delta)
+		agent = self.agent
+		self.look_timer += delta
+		self.move_timer += delta
+		target = getOptimalEnemy(agent)
+		if target:
+			agent.changeState(Attack)
+		if self.move_timer > self.move_frequency:
+			agent.changeState(Move, agent.squad, agent.getTeam())
