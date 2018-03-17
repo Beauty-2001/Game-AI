@@ -16,29 +16,26 @@
  * limitations under the License.
 '''
 
-import sys, pygame, math, numpy, random, time, copy
-from pygame.locals import *
 
-from astarnavigator import *
+from behaviortree import *
 
-############################
-### HELPERS
 
-'''
-def cloneAPSPNavigator(nav):
-	newnav = APSPNavigator()
-	newnav.world = nav.world
-	newnav.pathnodes = nav.pathnodes
-	newnav.pathnetwork = nav.pathnetwork
-	newnav.next = nav.next
-	newnav.dist = nav.dist
-	return newnav
-'''
+tree = [(Sequence, 1), [(Sequence, 2), (TestNode, 20), (TestNode, 22)], [(Selector, 5), [(Sequence, 9), (TestNode, 11), (TestNode, 12)], (TestNode, 31), (DelayTestNode, 35, 3), TestNode]]
 
-def cloneAStarNavigator(nav):
-	newnav = AStarNavigator()
-	newnav.world = nav.world
-	newnav.pathnodes = nav.pathnodes
-	newnav.pathnetwork = nav.pathnetwork
-	newnav.navmesh = nav.navmesh
-	return newnav
+bt = TestBehaviorTree()
+bt.buildTree(tree)
+print "print"
+bt.printTree()
+print "run"
+bt.start()
+go_on = True
+iterations = 0
+
+while go_on and iterations < 100:
+	iterations = iterations + 1
+	result = bt.update(0)
+	print result
+	if result is not None:
+		go_on = False
+
+print bt.history

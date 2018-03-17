@@ -437,7 +437,7 @@ class Gatherer(Agent):
 #####################
 ### Navigator
 
-class Navigator():
+class Navigator(object):
 	
 	### Path: the planned path of nodes
 	### World: a pointer to the world object

@@ -12,3 +12,6 @@
 
 # Homework 5
 [Homework 5](instructions/Homework5.md)
+
+# Homework 6
+[Homework 6](instructions/Homework6.md)
