@@ -126,7 +126,29 @@ class Sequence(BTNode):
 	def execute(self, delta = 0):
 		BTNode.execute(self, delta)
 		### YOUR CODE GOES BELOW HERE ###
-
+		num_chil = self.getNumChildren()
+		# If there are children then begin executing
+		if num_chil:
+			# Get the current index, child, and return value of execution
+			idx = self.getCurrentIndex()
+			child = self.getChild(idx)
+			ret = child.execute(delta)
+			# If success and at end return true, otherwise continue
+			# Reset node every time either true or false is returned
+			if ret == True:
+				if idx == num_chil:
+					self.reset()
+					return True
+				else:
+					self.setCurrentIndex(idx + 1)
+					return None
+			# If the child needs more ticks to execute, return none
+			elif ret == None:
+				return None
+			# If the child returns false sequence also returns false and resets
+			elif ret == False:
+				self.reset()
+				return False
 		### YOUR CODE GOES ABOVE HERE ###
 		return True
 
@@ -145,7 +167,28 @@ class Selector(BTNode):
 	def execute(self, delta = 0):
 		BTNode.execute(self, delta)
 		### YOUR CODE GOES BELOW HERE ###
-
+		num_chil = self.getNumChildren()
+		# If there are children, begin execution
+		if num_chil:
+			# Get current index, child, and return value of execution
+			idx = self.getCurrentIndex()
+			child = self.getChild(idx)
+			ret = child.execute(delta)
+			# If success and at end return true and reset, otherwise continue
+			if ret == True:
+				self.reset()
+				return True
+			# If the child needs more ticks to execute, return none
+			elif ret == None:
+				return None
+			# If the child returns false sequence also returns False and resets
+			elif ret == False:
+				if idx == num_chil:
+					self.reset()
+					return False
+				else:
+					self.setCurrentIndex(idx + 1)
+					return None
 		### YOUR CODE GOES ABOVE HERE ###
 		return False
 
