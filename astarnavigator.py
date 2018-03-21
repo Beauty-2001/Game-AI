@@ -186,8 +186,8 @@ class AStarNavigator(NavMeshNavigator):
             if clearShot(source, dest, self.world.getLines(), self.world.getPoints(), self.agent):
                 self.agent.moveToTarget(dest)
             else:
-                start = findClosestUnobstructed(source, self.pathnodes, self.world.getLinesWithoutBorders(), self.agent)
-                end = findClosestUnobstructed(dest, self.pathnodes, self.world.getLinesWithoutBorders(), self.agent)
+                start = findClosestUnobstructed_fix(source, self.pathnodes, self.world.getLinesWithoutBorders(), self.agent)
+                end = findClosestUnobstructed_fix(dest, self.pathnodes, self.world.getLinesWithoutBorders(), self.agent)
                 if start != None and end != None:
                     # print len(self.pathnetwork)
                     newnetwork = unobstructedNetwork(self.pathnetwork, self.world.getGates())
