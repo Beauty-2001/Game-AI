@@ -64,6 +64,20 @@ class SelectorTests(unittest.TestCase):
                 go_on = False
         self.assertFalse(result)
 
+    def test_selector_no_children(self):
+        self.tree = [(Selector, 1)]
+        self.bt.buildTree(self.tree)
+        self.bt.start()
+        go_on = True
+        iterations = 0
+
+        while go_on and iterations < 100:
+            iterations += 1
+            result = self.bt.update(0)
+            if result is not None:
+                go_on = False
+        self.assertFalse(result)
+
 class SequenceTests(unittest.TestCase):
     def setUp(self):
         self.tree = None
@@ -125,6 +139,20 @@ class SequenceTests(unittest.TestCase):
             if result is not None:
                 go_on = False
         self.assertFalse(result)
+    
+    def test_sequence_no_children(self):
+        self.tree = [(Sequence, 1)]
+        self.bt.buildTree(self.tree)
+        self.bt.start()
+        go_on = True
+        iterations = 0
+
+        while go_on and iterations < 100:
+            iterations += 1
+            result = self.bt.update(0)
+            if result is not None:
+                go_on = False
+        self.assertTrue(result)
 
 
 
