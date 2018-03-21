@@ -136,7 +136,7 @@ class Sequence(BTNode):
 			# If success and at end return true, otherwise continue
 			# Reset node every time either true or false is returned
 			if ret == True:
-				if idx == num_chil:
+				if idx == num_chil - 1:
 					self.reset()
 					return True
 				else:
@@ -181,9 +181,9 @@ class Selector(BTNode):
 			# If the child needs more ticks to execute, return none
 			elif ret == None:
 				return None
-			# If the child returns false sequence also returns False and resets
+			# If the child returns false selector only returns false if reached end of children
 			elif ret == False:
-				if idx == num_chil:
+				if idx == num_chil - 1:
 					self.reset()
 					return False
 				else:
