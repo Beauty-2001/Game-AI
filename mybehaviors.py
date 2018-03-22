@@ -19,6 +19,7 @@
 import sys, pygame, math, numpy, random, time, copy
 from pygame.locals import *
 
+from itertools import permutations
 from constants import *
 from utils import *
 from core import *
@@ -41,6 +42,39 @@ def myBuildTree(agent):
 	myid = str(agent.getTeam())
 	root = None
 	### YOUR CODE GOES BELOW HERE ###
+	# Start from leaf nodes
+	init_retreat = makeNode(Retreat, agent, 0.75)
+	chase_hero = makeNode(ChaseHero, agent)
+	kill_hero = makeNode(KillHero, agent)
+	chase_minion = makeNode(ChaseMinion, agent)
+	kill_minion = makeNode(KillMinion, agent)
+
+	hero_sequence = makeNode(Sequence, agent)
+	minion_sequence = makeNode(Sequence, agent)
+
+	level_daemon = makeNode(BuffDaemon, agent)
+
+	hero_minion_selector = makeNode(Selector, agent)
+
+	hp_daemon = makeNode(HitpointDaemon, agent)
+
+	# With all node defined, build tree from bottom up
+
+	hero_sequence.addChild(chase_hero)
+	hero_sequence.addChild(kill_hero)
+	level_daemon.addChild(hero_sequence)
+
+	minion_sequence.addChild(chase_minion)
+	minion_sequence.addChild(kill_minion)
+
+	hero_minion_selector.addChild(level_daemon)
+	hero_minion_selector.addChild(minion_sequence)
+
+	hp_daemon.addChild(hero_minion_selector)
+
+	root = Selector(agent)
+	root.addChild(init_retreat)
+	root.addChild(hp_daemon)
 
 	### YOUR CODE GOES ABOVE HERE ###
 	return root
@@ -115,16 +149,100 @@ class MoveToTarget(BTNode):
 		ret = BTNode.execute(self, delta)
 		if self.target == None:
 			# failed executability conditions
-			print "exec", self.id, "false"
+			# print "exec", self.id, "false"
 			return False
 		elif distance(self.agent.getLocation(), self.target) < self.agent.getRadius():
 			# Execution succeeds
-			print "exec", self.id, "true"
+			# print "exec", self.id, "true"
 			return True
 		else:
 			# executing
 			return None
 		return ret
+
+# Find list of nodes within the radius of a provided point
+def getPointInRadius(p, r_out, r_inner, possibleDests):
+	points = filter(lambda x, p=p, r_out=r_out, r_inner=r_inner: distance(x,p) <= r_out and distance(x,p) >= r_inner, possibleDests)
+	# print points
+	return points[np.random.choice(len(points), 1)[0]]
+
+def angleDegrees(p1, p2):
+	ang = angle(p1, p2) * 360/(2*math.pi)
+	# Third and fourth quadrent, negative
+	if p2[1] < 0:
+		ang *= -1
+	return ang
+
+# Find a point that is movable and away from a bullet
+def getValidAngle(p, r, bullet_pos, possibleDests):
+	x_axis = (1,0)
+	# Get relative position
+	bullet_pos = (bullet_pos[0] - p[0], bullet_pos[1] - p[1])
+	# print bullet_pos
+	# Get relative angle
+	bullet_angle = angleDegrees(x_axis, bullet_pos)
+	# print bullet_angle
+	# Get relative points movable to
+	mvmt_pts = [(pnt[0] - p[0], pnt[1] - p[1]) for pnt in possibleDests if distance(pnt,p) <= r + 1 and distance(pnt,p) >= r - 1]
+	# print mvmt_pts
+	# Find angles able to be moved to
+	angles = [angleDegrees(x_axis, p2) for p2 in mvmt_pts if abs(angleDegrees(x_axis, p2)) >= bullet_angle + 25 or abs(angleDegrees(x_axis, p2)) <= bullet_angle - 25]
+	# angles = [angleDegrees(x_axis, p2) for p2 in mvmt_pts]
+	# print angles
+	return angles[np.random.choice(len(angles), 1)[0]]
+
+##################
+### Dodge
+###
+### Move the agent back to the base to be healed
+### Parameters:
+###   0: Angle to dodge at (optional)
+###   1: node ID string (optional)
+
+
+class Dodge(BTNode):
+	
+	### angle: angle in degrees at which to dodge
+	
+	def parseArgs(self, args):
+		BTNode.parseArgs(self, args)
+		self.angle = None
+		# First argument is the factor
+		if len(args) > 0:
+			self.angle = args[0] % 360
+		# Second argument is the node ID
+		if len(args) > 1:
+			self.id = args[1]
+
+	def enter(self):
+		BTNode.enter(self)
+		self.bullets = self.agent.getVisibleType(Bullet)
+	
+	def execute(self, delta = 0):
+		ret = BTNode.execute(self, delta)
+		# If the agent can't dodge yet or there are no bullets to dodge, return Failure
+		if not self.bullets or not self.agent.canDodge():
+			return False
+		
+		# If an angle was set, jump in that direction regardless of consequence
+		if self.angle:
+			self.agent.dodge(self.angle)
+			return True
+
+		# When no angle given manually, find the perpendicular line to the bullet,
+		#  jump there only if the location is movable, also avoid exception when bullet
+		#  has already hit and has yet to die
+		if self.agent.getLocation() == self.bullets[0].getLocation():
+			return False
+
+		# How far the agent can jump
+		jmp_range = self.agent.getRadius()*1.5
+
+		escape_angle = getValidAngle(self.agent.getLocation(), jmp_range, self.bullets[0].getLocation(), self.agent.getPossibleDestinations())
+
+		self.agent.dodge(escape_angle)
+
+		return True
 
 ##################
 ### Retreat
@@ -157,11 +275,11 @@ class Retreat(BTNode):
 		ret = BTNode.execute(self, delta)
 		if self.agent.getHitpoints() > self.agent.getMaxHitpoints() * self.percentage:
 			# fail executability conditions
-			print "exec", self.id, "false"
+			# print "exec", self.id, "false"
 			return False
 		elif self.agent.getHitpoints() == self.agent.getMaxHitpoints():
 			# Exection succeeds
-			print "exec", self.id, "true"
+			# print "exec", self.id, "true"
 			return True
 		else:
 			# executing
@@ -213,11 +331,11 @@ class ChaseMinion(BTNode):
 		ret = BTNode.execute(self, delta)
 		if self.target == None or self.target.isAlive() == False:
 			# failed execution conditions
-			print "exec", self.id, "false"
+			# print "exec", self.id, "false"
 			return False
 		elif self.target is not None and distance(self.agent.getLocation(), self.target.getLocation()) < BIGBULLETRANGE:
 			# succeeded
-			print "exec", self.id, "true"
+			# print "exec", self.id, "true"
 			return True
 		else:
 			# executing
@@ -275,11 +393,11 @@ class KillMinion(BTNode):
 		ret = BTNode.execute(self, delta)
 		if self.target == None or distance(self.agent.getLocation(), self.target.getLocation()) > BIGBULLETRANGE:
 			# failed executability conditions
-			print "exec", self.id, "false"
+			# print "exec", self.id, "false"
 			return False
 		elif self.target.isAlive() == False:
 			# succeeded
-			print "exec", self.id, "true"
+			# print "exec", self.id, "true"
 			return True
 		else:
 			# executing
@@ -330,11 +448,11 @@ class ChaseHero(BTNode):
 		ret = BTNode.execute(self, delta)
 		if self.target == None or self.target.isAlive() == False:
 			# fails executability conditions
-			print "exec", self.id, "false"
+			# print "exec", self.id, "false"
 			return False
 		elif distance(self.agent.getLocation(), self.target.getLocation()) < BIGBULLETRANGE:
 			# succeeded
-			print "exec", self.id, "true"
+			# print "exec", self.id, "true"
 			return True
 		else:
 			# executing
@@ -388,11 +506,11 @@ class KillHero(BTNode):
 				print "foo none"
 			else:
 				print "foo dist", distance(self.agent.getLocation(), self.target.getLocation())
-			print "exec", self.id, "false"
+			# print "exec", self.id, "false"
 			return False
 		elif self.target.isAlive() == False:
 			# succeeded
-			print "exec", self.id, "true"
+			# print "exec", self.id, "true"
 			return True
 		else:
 			#executing
@@ -433,7 +551,7 @@ class HitpointDaemon(BTNode):
 		ret = BTNode.execute(self, delta)
 		if self.agent.getHitpoints() < self.agent.getMaxHitpoints() * self.percentage:
 			# Check failed
-			print "exec", self.id, "fail"
+			# print "exec", self.id, "fail"
 			return False
 		else:
 			# Check didn't fail, return child's status
@@ -473,7 +591,7 @@ class BuffDaemon(BTNode):
 				break
 		if hero == None or self.agent.level <= hero.level + self.advantage:
 			# fail check
-			print "exec", self.id, "fail"
+			# print "exec", self.id, "fail"
 			return False
 		else:
 			# Check didn't fail, return child's status
@@ -481,7 +599,56 @@ class BuffDaemon(BTNode):
 		return ret
 
 
+##################
+### AOEDaemon
+###
+### Execute children if an enemy minion is inside range or minion has other enemies around it.
+### Parameters:
+###   0: Minimum number of surrounding enemies required
+###   1: node ID string (optional)
 
+class AOEDaemon(BTNode):
+
+	### advantage: Number of levels above enemy level necessary to not fail the check
+
+	def parseArgs(self, args):
+		BTNode.parseArgs(self, args)
+		self.min_enemies = 1
+		# First argument is the advantage
+		if len(args) > 0:
+			self.min_enemies = args[0]
+			if self.min_enemies <= 0:
+				raise ValueError('minimum number of enemies cannot be zero or lower')
+		# Second argument is the node ID
+		if len(args) > 1:
+			self.id = args[1]
+
+	def execute(self, delta = 0):
+		ret = BTNode.execute(self, delta)
+
+		# Get list of minions in the scene
+		enemies = [enm for enm in self.agent.world.getEnemyNPCs(self.agent.getTeam()) if isinstance(enm, Minion)]
+
+		# In the event the agent can't area effect or unlikely event of no enemies existing, return false
+		if not enemies or not self.agent.canAreaEffect():
+			return False
+
+		aoe_range = AREAEFFECTRANGE * self.agent.getRadius()
+
+		# If a minion is within the range, don't think twice, just blast 'em
+		for e in enemies:
+			if distance(e.getLocation(), self.agent.getLocation()) < aoe_range:
+				return self.getChild(0).execute(delta)
+		
+		# TODO: See if there are at least min_enemies around the minion (including itself)
+		enemies = permutations(enemies, self.min_enemies)
+		for combo in enemies:
+			for i in range(1, self.min_enemies):
+				if distance(combo[0].getLocation(), combo[i].getLocation()) > aoe_range:
+					break
+			return self.getChild(0).execute(delta)
+
+		return ret
 
 
 #################################
