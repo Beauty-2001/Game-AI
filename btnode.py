@@ -63,10 +63,10 @@ class BTNode(object):
 	### Perform a behavior, should be called every tick
 	### Returns True if the behavior succeeds, False if the behavior fails, or None if the behavior should continue to execute during the next tick.
 	def execute(self, delta = 0):
-		# print "execute", self.id
 		if self.first:
 			self.enter()
 			self.first = False
+		# print "execute", self.id
 		return True
 			
 	def enter(self):
@@ -75,7 +75,7 @@ class BTNode(object):
 	
 	### Print each node id in tree in a depth-first fashion
 	def printTree(self):
-		print self.id
+		# print self.id
 		for child in self.children:
 			child.printTree()
 
